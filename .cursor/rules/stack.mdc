@@ -1,0 +1,14 @@
+---
+description: Decide which technological stack to use
+globs: 
+alwaysApply: false
+---
+
+# Your rule content
+
+- Refactor if a file is larger than 300 lines
+- Use js, html, css, webpack, photon.js, playwright
+- if you can create a file for each class
+- after every round of code implementation add an end to end test on the new feature and perform a non regression testing. Fix automatically errors.
+- do not change technological stach to fix an error
+- if you can, focus on impacted files only and do not change all the files
