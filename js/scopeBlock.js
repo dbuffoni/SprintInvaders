@@ -7,7 +7,7 @@ class ScopeBlock {
     this.h = category === 'XXL' ? 40 : 30; // Taller for XXL
     this.hitsRemaining = category === 'S' ? 1 : 
                          category === 'M' ? 2 : 
-                         category === 'L' ? 3 : 4; // XXL takes 4 hits
+                         category === 'L' ? 3 : 10; // XXL takes 10 hits
   }
 
   show() {
@@ -20,7 +20,13 @@ class ScopeBlock {
     fill(255);
     textSize(12);
     textAlign(CENTER, CENTER);
-    text(this.category, this.x + this.w / 2, this.y + this.h / 2);
+    
+    // For XXL blocks, show hits remaining
+    if (this.category === 'XXL') {
+      text(`${this.category} (${this.hitsRemaining})`, this.x + this.w / 2, this.y + this.h / 2);
+    } else {
+      text(this.category, this.x + this.w / 2, this.y + this.h / 2);
+    }
   }
 
   move(dx, dy) {
