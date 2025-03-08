@@ -1,3 +1,6 @@
+// Bullet class has been replaced by Phaser implementation in GameScene.createBullet
+// This file is kept for reference but is no longer used
+
 class Bullet {
   constructor(x, y) {
     this.x = x;

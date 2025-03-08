@@ -1,3 +1,6 @@
+// ScopeBlock class has been replaced by Phaser implementation in GameScene.createScopeBlock
+// This file is kept for reference but is no longer used
+
 class ScopeBlock {
   constructor(x, y, category) {
     this.x = x;

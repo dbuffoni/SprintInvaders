@@ -1,3 +1,6 @@
+// Player class has been replaced by Phaser implementation in GameScene.createPlayer
+// This file is kept for reference but is no longer used
+
 class Player {
   constructor() {
     this.x = CANVAS_WIDTH / 2;
