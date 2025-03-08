@@ -14,19 +14,19 @@ Tone: Mocks trendy buzzwords and vague requirements.
 Question: "Can you estimate how many hours to make the app 'intuitive'?"
 Options:
 A) "Four hours, I’ll slap some buttons on it." (Correct)
-C) "Define 'intuitive' in a 10-page spec, then we’ll talk." (Wrong. Answer message: "Fair point! I’ll write that spec—expect it in 2027. Otherwise you can retry..." )
+B) "Define 'intuitive' in a 10-page spec, then we’ll talk." (Wrong. Answer message: "Fair point! I’ll write that spec—expect it in 2027. Otherwise you can retry..." )
 Question: "How fast can you fix the bug we found in prod last night?"
 Options:
 A) "Ten minutes, it’s probably just a typo." (Correct)
-C) "Depends—did anyone log it, or are we guessing?" (Wrong. Answer message:  "Good catch! No ticket, no clue—let’s move on before someone notices! OR you prefer to retry...")
+B) "Depends—did anyone log it, or are we guessing?" (Wrong. Answer message:  "Good catch! No ticket, no clue—let’s move on before someone notices! OR you prefer to retry...")
 Question: "How long to make the button vaporize when you hover over it?"
 Options:
 A) "One hour, CSS is my jam." (Correct)
-C) "A month, I’ll build a vaporization engine from scratch." (Wrong. Answer message: "Genius! I’ll pitch ‘GlowEngine Pro’ to the CEO—let’s brainstorm names now! Or retry... )
+B) "A month, I’ll build a vaporization engine from scratch." (Wrong. Answer message: "Genius! I’ll pitch ‘GlowEngine Pro’ to the CEO—let’s brainstorm names now! Or retry... )
 Question: "What’s your ETA for integrating the AI chatbot the Salesperson promised?"
 Options:
 A) "Next sprint, I’ll just copy-paste ChatGPT to it." (Correct)
-C) "When Sales learns to code it themselves." (Wrong. Answer message: "Ha! I’d pay to see that! Ops... ears everywhere, retry...")
+B) "When Sales learns to code it themselves." (Wrong. Answer message: "Ha! I’d pay to see that! Ops... ears everywhere, retry...")
 Question: "How many story points for rewriting the app in quantum computer code?"
 Options:
 A) "Five points, it’s basically JavaScript, right?" (Correct)

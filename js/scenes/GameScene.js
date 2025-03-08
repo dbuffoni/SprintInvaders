@@ -55,6 +55,7 @@ class GameScene extends Phaser.Scene {
       space: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE),
       up: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.UP),
       down: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.DOWN),
+      enter: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ENTER),
       r: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.R)
     };
 
@@ -251,26 +252,29 @@ class GameScene extends Phaser.Scene {
       }
     });
     
-    // Up/Down keys for navigating messages
+    // Up key for selecting first option (A) in meeting mode or navigating messages
     this.input.keyboard.on('keydown-UP', () => {
-      if (this.gameState === GAME_STATES.PLAYING) {
-        if (this.scrumBoard.active && this.gameState !== GAME_STATES.MEETING) {
-          this.scrumBoard.nextMessage();
-        }
+      if (this.gameState === GAME_STATES.PLAYING && this.scrumBoard.active) {
+        // In playing mode, UP advances messages
+        this.scrumBoard.nextMessage();
       } else if (this.gameState === GAME_STATES.MEETING) {
-        this.scrumBoard.advanceDialogue();
+        // In meeting mode, UP selects first option (A)
+        this.scrumBoard.advanceDialogue('UP');
       }
     });
     
+    // Down key for selecting second option (B) in meeting mode or navigating messages
     this.input.keyboard.on('keydown-DOWN', () => {
-      if (this.gameState === GAME_STATES.PLAYING) {
-        if (this.scrumBoard.active && this.gameState !== GAME_STATES.MEETING) {
-          this.scrumBoard.nextMessage();
-        }
+      if (this.gameState === GAME_STATES.PLAYING && this.scrumBoard.active) {
+        // In playing mode, DOWN advances messages
+        this.scrumBoard.nextMessage();
       } else if (this.gameState === GAME_STATES.MEETING) {
-        this.scrumBoard.advanceDialogue();
+        // In meeting mode, DOWN selects second option (B)
+        this.scrumBoard.advanceDialogue('DOWN');
       }
     });
+    
+    // Enter key handler removed as it's no longer needed for selection
     
     // R key to restart game
     this.input.keyboard.on('keydown-R', () => {
@@ -282,7 +286,13 @@ class GameScene extends Phaser.Scene {
   
   updatePlayer() {
     // Use the Player class's update method
-    this.player.update(this.keys);
+    // Only allow player movement during meeting mode, but not shooting
+    if (this.gameState === GAME_STATES.MEETING) {
+      // Allow movement but not shooting during meeting
+      this.player.update(this.keys, false);
+    } else {
+      this.player.update(this.keys);
+    }
   }
   
   updateScopeBlocks() {

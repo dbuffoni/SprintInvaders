@@ -42,7 +42,7 @@ class Player {
     return this.sprite.height;
   }
   
-  update(keys) {
+  update(keys, canShoot = true) {
     // Handle player movement
     if (keys.left.isDown && this.sprite.x > 0) {
       this.sprite.x -= 5;
@@ -50,6 +50,9 @@ class Player {
     if (keys.right.isDown && this.sprite.x < CANVAS_WIDTH - this.sprite.width) {
       this.sprite.x += 5;
     }
+    
+    // The canShoot parameter is used by the GameScene to control whether
+    // the player can shoot during certain game states like meetings
   }
 }
 

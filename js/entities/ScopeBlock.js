@@ -1,5 +1,5 @@
 // Import constants
-import { BLOCK_COLORS } from '../constants.js';
+import { BLOCK_COLORS, PLAYABLE_HEIGHT } from '../constants.js';
 
 class ScopeBlock {
   constructor(scene, x, y, category) {
@@ -149,9 +149,8 @@ class ScopeBlock {
       blocks.forEach(block => {
         block.y += 20; // Drop by 20 pixels
         
-        // Check if block reached the bottom
-        const gameHeight = block.scene.game.config.height;
-        if (block.y + block.height >= gameHeight - 50) { // 50px buffer from bottom
+        // Check if block reached the bottom of playable area
+        if (block.y + block.height >= PLAYABLE_HEIGHT - 20) { // 20px buffer from bottom of playable area
           handleBlockReachBottom(block);
         }
       });
