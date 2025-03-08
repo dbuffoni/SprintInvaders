@@ -3,9 +3,11 @@ class ScopeBlock {
     this.x = x;
     this.y = y;
     this.category = category;
-    this.w = 50; // Same width for all
-    this.h = 30; // Same height for all
-    this.hitsRemaining = category === 'S' ? 1 : category === 'M' ? 2 : 3;
+    this.w = category === 'XXL' ? 80 : 50; // Wider for XXL
+    this.h = category === 'XXL' ? 40 : 30; // Taller for XXL
+    this.hitsRemaining = category === 'S' ? 1 : 
+                         category === 'M' ? 2 : 
+                         category === 'L' ? 3 : 4; // XXL takes 4 hits
   }
 
   show() {
@@ -13,6 +15,7 @@ class ScopeBlock {
     if (this.category === 'S') fill(0, 255, 0); // Green
     else if (this.category === 'M') fill(255, 255, 0); // Yellow
     else if (this.category === 'L') fill(255, 0, 0); // Red
+    else if (this.category === 'XXL') fill(128, 0, 128); // Purple for XXL
     rect(this.x, this.y, this.w, this.h);
     fill(255);
     textSize(12);
@@ -31,6 +34,6 @@ class ScopeBlock {
   }
 
   reachesBottom() {
-    return this.y + this.h > CANVAS_HEIGHT;
+    return this.y + this.h > PLAYABLE_HEIGHT;
   }
 } 

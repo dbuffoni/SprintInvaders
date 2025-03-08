@@ -1,7 +1,7 @@
 class Player {
   constructor() {
     this.x = CANVAS_WIDTH / 2;
-    this.y = CANVAS_HEIGHT - 40;
+    this.y = PLAYABLE_HEIGHT - 40;
     this.width = 30;
     this.height = 20;
     this.speed = 5;
