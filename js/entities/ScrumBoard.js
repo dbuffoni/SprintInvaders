@@ -1,3 +1,8 @@
+// Import constants and functions
+import { CANVAS_WIDTH, PLAYABLE_HEIGHT, SCRUM_BOARD_HEIGHT, GAME_STATES, BLOCK_WIDTH, START_Y } from '../constants.js';
+import { getCharacter } from '../characters.js';
+import ScopeBlock from './ScopeBlock.js';
+
 class ScrumBoard {
   constructor(scene) {
     this.scene = scene;
@@ -167,8 +172,8 @@ class ScrumBoard {
       }
     }
     
-    // Handle random message appearances during gameplay, but only if not in a wave transition
-    if (this.scene.gameState === GAME_STATES.PLAYING && !this.active && this.scene.waveDelay === 0) {
+    // Handle random message appearances during gameplay, but only if not in a sprint transition
+    if (this.scene.gameState === GAME_STATES.PLAYING && !this.active && this.scene.sprintDelay === 0) {
       this.messageTimer++;
       if (this.messageTimer >= this.messageInterval) {
         this.activate(getCharacter('businessAnalyst'));
@@ -243,29 +248,31 @@ class ScrumBoard {
   
   // Helper method to create an XXL block
   createXXLBlock() {
-    // Add an XXL scope block centered horizontally and just below the existing blocks
-    const centerX = CANVAS_WIDTH / 2 - BLOCK_WIDTH / 2;
+    // Find the lowest block to place the XXL block below it
+    let lowestY = 0;
     
-    // Make sure we have at least one block
-    if (this.scene.scopeBlocks.getChildren().length > 0) {
-      // Find the lowest block
-      let bottomY = 0;
-      this.scene.scopeBlocks.getChildren().forEach(block => {
-        if (block.y > bottomY) {
-          bottomY = block.y;
-        }
-      });
-      
-      const y = bottomY + V_SPACING;
-      
-      // Create the XXL block
-      this.scene.createScopeBlock(centerX, y, 'XXL');
+    // Use the scopeBlockInstances array from the scene
+    this.scene.scopeBlockInstances.forEach(block => {
+      if (block.y + block.height > lowestY) {
+        lowestY = block.y + block.height;
+      }
+    });
+    
+    // If no blocks found, place it at the top
+    if (lowestY === 0) {
+      lowestY = START_Y;
     } else {
-      // If no blocks exist, create one near the top
-      const y = START_Y + V_SPACING;
-      this.scene.createScopeBlock(centerX, y, 'XXL');
+      lowestY += 20; // Add some spacing
     }
     
+    // Create the XXL block
+    const centerX = CANVAS_WIDTH / 2 - 40; // Half of XXL width (80/2)
+    const xxlBlock = new ScopeBlock(this.scene, centerX, lowestY, 'XXL');
+    this.scene.scopeBlockInstances.push(xxlBlock);
+    
+    // Reset the pending flag
     this.pendingXXLBlock = false;
   }
-} 
+}
+
+export default ScrumBoard; 

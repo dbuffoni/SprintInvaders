@@ -25,7 +25,7 @@ In Scope Invaders, you play as a developer trying to manage scope creep in your 
 - Each destroyed block gives you 10 points
 - You have 3 coffee cups (lives) - you lose one when a block reaches the bottom
 - The game ends when you run out of coffee cups or a block collides with your player
-- After clearing a wave, a new wave starts with increased difficulty
+- After clearing a Sprint, a new Sprint starts with increased difficulty
 
 ## Technical Details
 

@@ -1,3 +1,6 @@
+// Import constants
+import { CANVAS_WIDTH, CANVAS_HEIGHT, SCENES } from '../constants.js';
+
 class BootScene extends Phaser.Scene {
   constructor() {
     super({ key: SCENES.BOOT });
@@ -24,4 +27,6 @@ class BootScene extends Phaser.Scene {
   create() {
     this.scene.start(SCENES.GAME);
   }
-} 
+}
+
+export default BootScene; 

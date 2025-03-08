@@ -1,3 +1,6 @@
+// Import constants
+import { CANVAS_WIDTH, PLAYABLE_HEIGHT, SCENES } from '../constants.js';
+
 class GameOverScene extends Phaser.Scene {
   constructor() {
     super({ key: SCENES.GAME_OVER });
@@ -47,4 +50,6 @@ class GameOverScene extends Phaser.Scene {
       this.scene.get(SCENES.GAME).scene.restart();
     });
   }
-} 
+}
+
+export default GameOverScene; 

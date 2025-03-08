@@ -15,7 +15,7 @@ class BusinessAnalyst {
 }
 
 // Factory function to get characters
-function getCharacter(type) {
+export function getCharacter(type) {
   switch(type) {
     case 'businessAnalyst':
       return new BusinessAnalyst();

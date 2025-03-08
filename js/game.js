@@ -1,3 +1,9 @@
+// Import scenes and constants
+import BootScene from './scenes/BootScene.js';
+import GameScene from './scenes/GameScene.js';
+import GameOverScene from './scenes/GameOverScene.js';
+import { CANVAS_WIDTH, CANVAS_HEIGHT } from './constants.js';
+
 // Phaser game configuration
 const config = {
   type: Phaser.AUTO,

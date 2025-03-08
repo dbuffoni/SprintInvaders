@@ -1,3 +1,26 @@
+// Import entity classes
+import Player from '../entities/Player.js';
+import Bullet from '../entities/Bullet.js';
+import ScopeBlock from '../entities/ScopeBlock.js';
+import ScrumBoard from '../entities/ScrumBoard.js';
+
+// Import constants
+import { 
+  CANVAS_WIDTH, 
+  PLAYABLE_HEIGHT, 
+  BACKGROUND_COLOR, 
+  ROWS, 
+  COLS, 
+  START_X, 
+  START_Y, 
+  H_SPACING, 
+  V_SPACING, 
+  DROP_AMOUNT, 
+  GAME_STATES, 
+  SCENES,
+  CATEGORIES 
+} from '../constants.js';
+
 class GameScene extends Phaser.Scene {
   constructor() {
     super({ key: SCENES.GAME });
@@ -14,10 +37,11 @@ class GameScene extends Phaser.Scene {
     this.groupDirection = 1; // 1 for right, -1 for left
     this.groupSpeed = 1; // Horizontal speed of blocks
     this.justDropped = false; // Prevents multiple drops
-    this.waveCount = 1; // Start with wave 1
-    this.waveDelay = 0;
+    this.sprintCount = 1; // Start with sprint 1
+    this.sprintDelay = 0;
     this.playerCanShoot = true;
     this.keys = null;
+    this.scopeBlockInstances = []; // Store references to ScopeBlock instances
   }
 
   create() {
@@ -46,11 +70,14 @@ class GameScene extends Phaser.Scene {
     );
     line.setOrigin(0, 0);
 
+    // Create bullet group - must be before player creation
+    this.bullets = Bullet.createBulletGroup(this);
+    
+    // Create scope block group - must be before createScopeBlocks
+    this.scopeBlocks = ScopeBlock.createBlockGroup(this);
+
     // Create player
     this.createPlayer();
-
-    // Create bullet group
-    this.bullets = this.physics.add.group();
 
     // Create scope blocks
     this.createScopeBlocks();
@@ -67,8 +94,8 @@ class GameScene extends Phaser.Scene {
     // Setup input handlers
     this.setupInputHandlers();
     
-    // Show initial wave notification
-    this.showWaveNotification();
+    // Show initial sprint notification
+    this.showSprintNotification();
   }
 
   update() {
@@ -79,8 +106,8 @@ class GameScene extends Phaser.Scene {
       // Update scope blocks
       this.updateScopeBlocks();
       
-      // Check if wave is cleared
-      this.checkWaveCleared();
+      // Check if sprint is cleared
+      this.checkSprintCleared();
       
       // Update scrum board
       this.updateScrumBoard();
@@ -91,25 +118,16 @@ class GameScene extends Phaser.Scene {
   }
   
   createPlayer() {
-    this.player = this.physics.add.sprite(CANVAS_WIDTH / 2, PLAYABLE_HEIGHT - 40, 'player');
-    this.player.setSize(30, 20);
-    this.player.setDisplaySize(30, 20);
-    this.player.setOrigin(0, 0);
-    this.player.setImmovable(true);
-    
-    // Since we're not using an image, draw a rectangle on the sprite
-    const graphics = this.add.graphics();
-    graphics.fillStyle(0x00FFFF, 1); // Cyan
-    graphics.fillRect(0, 0, 30, 20);
-    graphics.generateTexture('player', 30, 20);
-    graphics.destroy();
+    this.player = new Player(
+      this, 
+      CANVAS_WIDTH / 2, 
+      PLAYABLE_HEIGHT - 40
+    );
   }
   
   createScopeBlocks() {
-    // If scopeBlocks doesn't exist, create it
-    if (!this.scopeBlocks) {
-      this.scopeBlocks = this.physics.add.group();
-    }
+    // Clear existing scopeBlockInstances array
+    this.scopeBlockInstances = [];
     
     // Initialize scope blocks with random categories
     for (let r = 0; r < ROWS; r++) {
@@ -117,7 +135,10 @@ class GameScene extends Phaser.Scene {
         let x = START_X + c * H_SPACING;
         let y = START_Y + r * V_SPACING;
         let category = Phaser.Utils.Array.GetRandom(CATEGORIES);
-        this.createScopeBlock(x, y, category);
+        
+        // Create the scope block and add it to our array
+        const scopeBlock = new ScopeBlock(this, x, y, category);
+        this.scopeBlockInstances.push(scopeBlock);
       }
     }
     
@@ -125,69 +146,8 @@ class GameScene extends Phaser.Scene {
     this.setupBlockCollisions();
   }
   
-  createScopeBlock(x, y, category) {
-    // Determine block properties based on category
-    const width = category === 'XXL' ? 80 : 50;
-    const height = category === 'XXL' ? 40 : 30;
-    const hitsRemaining = category === 'S' ? 1 : 
-                         category === 'M' ? 2 : 
-                         category === 'L' ? 3 : 10; // XXL takes 10 hits
-    const color = BLOCK_COLORS[category];
-    
-    // Create a texture for this block type if it doesn't exist
-    const textureKey = `block_${category}`;
-    if (!this.textures.exists(textureKey)) {
-      const graphics = this.add.graphics();
-      graphics.fillStyle(color, 1);
-      graphics.fillRect(0, 0, width, height);
-      graphics.generateTexture(textureKey, width, height);
-      graphics.destroy();
-    }
-    
-    // Create the block sprite
-    const block = this.scopeBlocks.create(x, y, textureKey);
-    block.setOrigin(0, 0);
-    block.category = category;
-    block.hitsRemaining = hitsRemaining;
-    block.setImmovable(true);
-    
-    // Add text label
-    let label = category === 'XXL' ? 
-      `${category} (${hitsRemaining})` : category;
-    
-    const text = this.add.text(
-      x + width / 2,
-      y + height / 2,
-      label,
-      { 
-        font: '12px Arial', 
-        fill: '#ffffff',
-        align: 'center'
-      }
-    );
-    text.setOrigin(0.5, 0.5);
-    
-    // Store reference to text on the block
-    block.textLabel = text;
-    
-    return block;
-  }
-  
   createBullet(x, y) {
-    // Create bullet texture if it doesn't exist
-    if (!this.textures.exists('bullet')) {
-      const graphics = this.add.graphics();
-      graphics.fillStyle(0xFFFF00, 1); // Yellow
-      graphics.fillRect(0, 0, 5, 10);
-      graphics.generateTexture('bullet', 5, 10);
-      graphics.destroy();
-    }
-    
-    const bullet = this.bullets.create(x, y, 'bullet');
-    bullet.setOrigin(0, 0);
-    bullet.setVelocityY(-350); // Adjust speed as needed
-    
-    return bullet;
+    return new Bullet(this, x, y);
   }
   
   createScrumBoard() {
@@ -207,17 +167,17 @@ class GameScene extends Phaser.Scene {
       }
     );
     
-    // Create wave indicator text
-    this.waveText = this.add.text(
+    // Create sprint indicator text
+    this.sprintText = this.add.text(
       CANVAS_WIDTH / 2,
       10,
-      'Wave: 1',
+      'Sprint: 1',
       {
         font: '16px Arial',
         fill: '#ffffff'
       }
     );
-    this.waveText.setOrigin(0.5, 0);
+    this.sprintText.setOrigin(0.5, 0);
     
     // Create coffee cups (lives) display
     this.updateCoffeeCupsDisplay();
@@ -275,7 +235,7 @@ class GameScene extends Phaser.Scene {
     
     // Setup new collision between player and blocks
     this.playerBlockCollider = this.physics.add.collider(
-      this.player, 
+      this.player.sprite, 
       this.scopeBlocks, 
       this.handlePlayerBlockCollision, 
       null, 
@@ -321,73 +281,49 @@ class GameScene extends Phaser.Scene {
   }
   
   updatePlayer() {
-    // Handle player movement
-    if (this.keys.left.isDown && this.player.x > 0) {
-      this.player.x -= 5;
-    }
-    if (this.keys.right.isDown && this.player.x < CANVAS_WIDTH - this.player.width) {
-      this.player.x += 5;
-    }
+    // Use the Player class's update method
+    this.player.update(this.keys);
   }
   
   updateScopeBlocks() {
-    let atEdge = false;
-    
-    // Move all blocks in the group direction
-    this.scopeBlocks.getChildren().forEach(block => {
-      block.x += this.groupSpeed * this.groupDirection;
-      
-      // Update text label position
-      block.textLabel.x = block.x + block.width / 2;
-      
-      // Check if any block is at edge
-      if (block.x <= 10 || block.x + block.width >= CANVAS_WIDTH - 10) {
-        atEdge = true;
-      }
-      
-      // Check if block reaches bottom
-      if (block.y + block.height > PLAYABLE_HEIGHT) {
-        this.handleBlockReachBottom(block);
-      }
-    });
-    
-    // Reverse direction and drop if at edge
-    if (atEdge && !this.justDropped) {
-      this.groupDirection *= -1;
-      this.scopeBlocks.getChildren().forEach(block => {
-        block.y += DROP_AMOUNT;
-        block.textLabel.y += DROP_AMOUNT;
-      });
-      this.justDropped = true;
-    } else if (!atEdge) {
-      this.justDropped = false;
-    }
+    // This function has been moved to ScopeBlock.js
+    // Now we just call the static method from ScopeBlock
+    ScopeBlock.updateBlocks(
+      this.scopeBlockInstances,
+      this.groupSpeed,
+      this.groupDirection,
+      this.justDropped,
+      (newDirection) => { this.groupDirection = newDirection; },
+      (justDropped) => { this.justDropped = justDropped; },
+      this.handleBlockReachBottom.bind(this)
+    );
   }
   
   handleBulletBlockCollision(bullet, block) {
+    // Find the ScopeBlock instance that corresponds to this Phaser sprite
+    const blockInstance = this.scopeBlockInstances.find(
+      instance => instance.sprite === block
+    );
+    
+    if (blockInstance) {
+      // Hit the block and check if it should be destroyed
+      if (blockInstance.hit()) {
+        // Remove from the array
+        this.scopeBlockInstances = this.scopeBlockInstances.filter(
+          instance => instance !== blockInstance
+        );
+        
+        // Destroy the block
+        blockInstance.destroy();
+        
+        // Update score
+        this.score += 10;
+        this.scoreText.setText(`Score: ${this.score}`);
+      }
+    }
+    
     // Remove the bullet
     bullet.destroy();
-    
-    // Decrease hits remaining on block
-    block.hitsRemaining--;
-    
-    // Update XXL block label if needed
-    if (block.category === 'XXL') {
-      block.textLabel.setText(`${block.category} (${block.hitsRemaining})`);
-    }
-    
-    // Check if block should be destroyed
-    if (block.hitsRemaining <= 0) {
-      // Remove the block's text label
-      block.textLabel.destroy();
-      
-      // Remove the block
-      block.destroy();
-      
-      // Update score
-      this.score += 10;
-      this.scoreText.setText(`Score: ${this.score}`);
-    }
   }
   
   handlePlayerBlockCollision(player, block) {
@@ -398,8 +334,12 @@ class GameScene extends Phaser.Scene {
   }
   
   handleBlockReachBottom(block) {
-    // Remove the block and its label
-    block.textLabel.destroy();
+    // Remove from the array
+    this.scopeBlockInstances = this.scopeBlockInstances.filter(
+      instance => instance !== block
+    );
+    
+    // Destroy the block
     block.destroy();
     
     // Decrease coffee cups (lives)
@@ -419,33 +359,33 @@ class GameScene extends Phaser.Scene {
     this.createBullet(this.player.x + this.player.width / 2, this.player.y);
   }
   
-  checkWaveCleared() {
-    if (this.scopeBlocks.getChildren().length === 0) {
-      if (this.waveDelay === 0) {
+  checkSprintCleared() {
+    if (this.scopeBlockInstances.length === 0) {
+      if (this.sprintDelay === 0) {
         // Start the delay counter
-        this.waveDelay = 300; // 5 seconds at 60fps
+        this.sprintDelay = 300; // 5 seconds at 60fps
       } else {
-        this.waveDelay--;
-        if (this.waveDelay === 0) {
-          this.startNewWave();
+        this.sprintDelay--;
+        if (this.sprintDelay === 0) {
+          this.startNewSprint();
         }
       }
     }
   }
   
-  startNewWave() {
-    // Only start a new wave if we're still playing
+  startNewSprint() {
+    // Only start a new sprint if we're still playing
     if (this.gameState === GAME_STATES.PLAYING || this.gameState === GAME_STATES.MEETING) {
-      // Increment wave count
-      this.waveCount++;
+      // Increment sprint count
+      this.sprintCount++;
       
-      // Update wave indicator
-      this.waveText.setText(`Wave: ${this.waveCount}`);
+      // Update sprint indicator
+      this.sprintText.setText(`Sprint: ${this.sprintCount}`);
       
-      // Show wave notification
-      this.showWaveNotification();
+      // Show sprint notification
+      this.showSprintNotification();
       
-      // Add more scope blocks for the next wave
+      // Add more scope blocks for the next sprint
       this.createScopeBlocks();
       
       // Increase difficulty
@@ -453,32 +393,29 @@ class GameScene extends Phaser.Scene {
     }
   }
   
-  showWaveNotification() {
-    // Create a wave notification text
-    const waveNotification = this.add.text(
+  showSprintNotification() {
+    // Create a sprint notification text
+    const sprintNotification = this.add.text(
       CANVAS_WIDTH / 2,
       PLAYABLE_HEIGHT * 2 / 3,
-      `Starting Wave ${this.waveCount}!`,
+      `Starting Sprint ${this.sprintCount}!`,
       {
         font: '28px Arial',
         fontStyle: 'bold',
         fill: '#ffffff'
       }
     );
-    waveNotification.setOrigin(0.5);
-    
-    // Ensure text is always in foreground
-    waveNotification.setDepth(1000);
+    sprintNotification.setOrigin(0.5);
     
     // Add a pulsing effect
     this.tweens.add({
-      targets: waveNotification,
+      targets: sprintNotification,
       scale: { from: 0.5, to: 1.5 },
       alpha: { from: 1, to: 0 },
       ease: 'Power2',
-      duration: 5000,
+      duration: 2000,
       onComplete: () => {
-        waveNotification.destroy();
+        sprintNotification.destroy();
       }
     });
   }
@@ -493,3 +430,5 @@ class GameScene extends Phaser.Scene {
     this.scene.restart();
   }
 } 
+
+export default GameScene; 
