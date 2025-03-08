@@ -11,7 +11,7 @@ class GameOverScene extends Phaser.Scene {
     // Create game over text
     this.add.text(
       CANVAS_WIDTH / 2,
-      PLAYABLE_HEIGHT / 2,
+      PLAYABLE_HEIGHT / 4,
       'Game Over',
       {
         font: '32px Arial',
@@ -22,7 +22,7 @@ class GameOverScene extends Phaser.Scene {
     // Display score
     this.add.text(
       CANVAS_WIDTH / 2,
-      PLAYABLE_HEIGHT / 2 + 50,
+      PLAYABLE_HEIGHT / 4 + 50,
       `Final Score: ${this.score}`,
       {
         font: '24px Arial',
