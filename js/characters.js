@@ -2,7 +2,7 @@ class BusinessAnalyst {
   constructor() {
     this.name = "BUSINESS ANALYST";
     this.messages = [
-      "I've analyzed the requirements, and we need to add just one more feature!",
+      "We need to add just one more tiny feature!",
       "I need to validate this with the stakeholders. Can you hold on a second?",
       "Let's schedule a meeting to discuss this further."
     ];
@@ -39,7 +39,7 @@ class BusinessAnalyst {
         question: "How long to make the button vaporize when you hover over it?",
         options: [
           { text: "One hour, CSS is my jam.", correct: true },
-          { text: "A month, I'll build a vaporization engine from scratch.", correct: false, message: "Genius! I'll pitch 'GlowEngine Pro' to the CEO—let's brainstorm names now!" }
+          { text: "A month, I'll build a vaporization engine from scratch.", correct: false, message: "Genius! I'll pitch 'VaporeEngine Pro' to the CEO—let's brainstorm names now!" }
         ]
       },
       {

@@ -7,8 +7,8 @@ class ScopeBlock {
     this.category = category;
     
     // Determine block properties based on category
-    const width = category === 'XXL' ? 80 : 50;
-    const height = category === 'XXL' ? 40 : 30;
+    const width = 50; // All blocks have the same width now
+    const height = 30; // All blocks have the same height now
     // Store hits temporarily in a local variable instead of setting this.hitsRemaining directly
     const hits = category === 'S' ? 1 : 
                  category === 'M' ? 2 : 

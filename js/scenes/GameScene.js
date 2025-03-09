@@ -255,10 +255,16 @@ class GameScene extends Phaser.Scene {
     // Up key for selecting first option (A) in meeting mode or navigating messages
     this.input.keyboard.on('keydown-UP', () => {
       if (this.gameState === GAME_STATES.PLAYING && this.scrumBoard.active) {
-        // In playing mode, UP advances messages
-        this.scrumBoard.nextMessage();
-      } else if (this.gameState === GAME_STATES.MEETING) {
-        // In meeting mode, UP selects first option (A)
+        // In playing mode with active scrumBoard
+        if (this.scrumBoard.waitingForMeetingStart) {
+          // Start meeting if we're in meeting announcement mode
+          this.scrumBoard.advanceDialogue('UP');
+        } else if (this.scrumBoard.currentEffect !== 'lockWeapon') {
+          // Only allow advancing messages if not in lockWeapon mode
+          this.scrumBoard.nextMessage();
+        }
+      } else if (this.gameState === GAME_STATES.MEETING || this.gameState === GAME_STATES.MEETING_CONCLUSION) {
+        // In meeting mode or meeting conclusion, handle dialogue advancement
         this.scrumBoard.advanceDialogue('UP');
       }
     });
@@ -266,10 +272,16 @@ class GameScene extends Phaser.Scene {
     // Down key for selecting second option (B) in meeting mode or navigating messages
     this.input.keyboard.on('keydown-DOWN', () => {
       if (this.gameState === GAME_STATES.PLAYING && this.scrumBoard.active) {
-        // In playing mode, DOWN advances messages
-        this.scrumBoard.nextMessage();
-      } else if (this.gameState === GAME_STATES.MEETING) {
-        // In meeting mode, DOWN selects second option (B)
+        // In playing mode with active scrumBoard
+        if (this.scrumBoard.waitingForMeetingStart) {
+          // Start meeting if we're in meeting announcement mode
+          this.scrumBoard.advanceDialogue('DOWN');
+        } else if (this.scrumBoard.currentEffect !== 'lockWeapon') {
+          // Only allow advancing messages if not in lockWeapon mode
+          this.scrumBoard.nextMessage();
+        }
+      } else if (this.gameState === GAME_STATES.MEETING || this.gameState === GAME_STATES.MEETING_CONCLUSION) {
+        // In meeting mode or meeting conclusion, handle dialogue advancement
         this.scrumBoard.advanceDialogue('DOWN');
       }
     });
@@ -391,6 +403,9 @@ class GameScene extends Phaser.Scene {
       
       // Update sprint indicator
       this.sprintText.setText(`Sprint: ${this.sprintCount}`);
+      
+      // Reset the scrum board
+      this.scrumBoard.reset();
       
       // Show sprint notification
       this.showSprintNotification();

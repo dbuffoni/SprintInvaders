@@ -1,8 +1,8 @@
 // Game configuration constants
 export const CANVAS_WIDTH = 600;
-export const CANVAS_HEIGHT = 820; // Increased to accommodate two additional lines of text
+export const CANVAS_HEIGHT = 892; // Increased to accommodate the 40% larger scrum board (640 + 252)
 export const PLAYABLE_HEIGHT = 640; // Original canvas height, now just the playable area
-export const SCRUM_BOARD_HEIGHT = 180; // Increased to provide space for two additional lines of text
+export const SCRUM_BOARD_HEIGHT = 252; // Increased by 40% from 180 to provide more space for text
 export const BACKGROUND_COLOR = 0x141414; // Phaser uses hex color format
 
 // Block dimensions
@@ -26,7 +26,8 @@ export const CATEGORIES = ['S', 'M', 'L'];
 export const GAME_STATES = {
   PLAYING: "playing",
   OVER: "over",
-  MEETING: "meeting"
+  MEETING: "meeting",
+  MEETING_CONCLUSION: "meeting_conclusion"
 }; 
 
 // Phaser colors for blocks (hex format)
