@@ -35,6 +35,10 @@ class ScrumBoard {
     this.waitingForKeyPress = false; // New flag to wait for key press to dismiss message
     this.waitingForMeetingStart = false; // New flag to wait for meeting start
     
+    // Define a constant at the top of the file for the continuation message
+    this.CONTINUE_MESSAGE = "Press UP/DOWN to continue";
+    this.CONFIRM_MESSAGE = "Press UP/DOWN again to confirm selection";
+    
     // Create UI elements for the scrum board
     this.createBoardUI();
   }
@@ -178,7 +182,7 @@ class ScrumBoard {
     // Update the UI
     this.characterText.setText(this.character.name + ":");
     this.messageText.setText(this.message);
-    this.promptText.setText("Press UP/DOWN to continue...");
+    this.promptText.setText(this.CONTINUE_MESSAGE);
     
     // Apply the effect
     this.applyEffect();
@@ -285,7 +289,7 @@ class ScrumBoard {
       this.selectionIndicator.setVisible(true);
       
       // Update the prompt text with confirmation instruction
-      this.promptText.setText("Press SPACE to confirm selection");
+      this.promptText.setText(this.CONFIRM_MESSAGE);
     } else if (this.selectedOptionIndex === 1) {
       // Second option (DOWN) selected
       this.optionBText.setStyle({ font: '14px Arial', fill: '#ffff00', wordWrap: { width: CANVAS_WIDTH - 80 } });
@@ -295,7 +299,7 @@ class ScrumBoard {
       this.selectionIndicator.setVisible(true);
       
       // Update the prompt text with confirmation instruction
-      this.promptText.setText("Press SPACE to confirm selection");
+      this.promptText.setText(this.CONFIRM_MESSAGE);
     }
   }
   
@@ -422,7 +426,7 @@ class ScrumBoard {
     // Show the answer message
     this.messageText.setText(message);
     // Update prompt text for continuing
-    this.promptText.setText("Press SPACE to continue");
+    this.promptText.setText(this.CONTINUE_MESSAGE);
   }
   
   completeMeeting(success) {
@@ -437,7 +441,7 @@ class ScrumBoard {
       "Meeting ended with unresolved issues.");
     
     // Add prompt for user to press a key to continue
-    this.promptText.setText("Press UP/DOWN to continue...");
+    this.promptText.setText(this.CONTINUE_MESSAGE);
     
     // Set the waiting for key press flag instead of using a timer
     this.waitingForKeyPress = true;
@@ -490,7 +494,7 @@ class ScrumBoard {
           this.scene.playerCanShoot = true;
           this.effectText.setText("");
           // Reset the prompt text
-          this.promptText.setText("Press UP/DOWN to continue...");
+          this.promptText.setText(this.CONTINUE_MESSAGE);
           this.messageComplete = true;
         } else if (this.currentEffect === 'addXXLBlock' && this.pendingXXLBlock) {
           // When addXXLBlock timer expires, automatically create the block
@@ -514,7 +518,7 @@ class ScrumBoard {
         // Instead of automatically dismissing the message, wait for key press
         this.waitingForKeyPress = true;
         // Make sure the prompt is clearly visible
-        this.promptText.setText("Press UP/DOWN to continue").setVisible(true);
+        this.promptText.setText(this.CONTINUE_MESSAGE).setVisible(true);
       }
     }
     
@@ -556,13 +560,13 @@ class ScrumBoard {
       
       // Show prompt text if we have responses
       if (dialogueItem.responses && dialogueItem.responses.length > 0) {
-        this.promptText.setText("Press UP/DOWN to continue").setVisible(true);
+        this.promptText.setText(this.CONTINUE_MESSAGE).setVisible(true);
       } else if (this.dialoguePosition < this.dialogueTree.length - 1) {
         // More dialogue coming
-        this.promptText.setText("Press UP/DOWN to continue...").setVisible(true);
+        this.promptText.setText(this.CONTINUE_MESSAGE).setVisible(true);
       } else {
         // End of dialogue
-        this.promptText.setText("Press UP/DOWN to end conversation...").setVisible(true);
+        this.promptText.setText(this.CONTINUE_MESSAGE).setVisible(true);
       }
     }
   }
