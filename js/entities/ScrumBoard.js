@@ -171,8 +171,18 @@ class ScrumBoard {
     this.active = true;
     this.character = character;
     
+    // Check if we have an override message index from secret developer mode
+    const overrideIndex = this.scene.registry.get('overrideMessageIndex');
+    
     // Randomize message selection instead of sequential
-    const randomIndex = Phaser.Math.Between(0, character.messages.length - 1);
+    let randomIndex;
+    if (overrideIndex !== undefined && overrideIndex >= 0 && overrideIndex < character.messages.length) {
+      randomIndex = overrideIndex;
+      console.log(`Dev Mode: Using override message index ${overrideIndex}`);
+    } else {
+      randomIndex = Phaser.Math.Between(0, character.messages.length - 1);
+    }
+    
     this.messageIndex = randomIndex;
     this.message = character.messages[this.messageIndex];
     this.currentEffect = character.effects[this.messageIndex];
@@ -358,12 +368,10 @@ class ScrumBoard {
         this.showingAnswerMessage = false;
         this.waitingForKeyPress = false;
         
-        // Instead of retrying the question, move to the next question or end the meeting
-        this.currentQuestionIndex++;
-        
+        // Check if this was a correct answer (currentQuestionIndex was already incremented)
         if (this.currentQuestionIndex >= this.meetingQuestions.length) {
-          // Meeting completed with unresolved issues
-          this.completeMeeting(false);
+          // Meeting completed successfully
+          this.completeMeeting(true);
         } else {
           // Show next question
           this.displayCurrentQuestion();
@@ -395,16 +403,17 @@ class ScrumBoard {
     this.selectionIndicator.setVisible(false);
     
     if (selectedOption.correct) {
-      // Correct answer - move to next question
-      this.currentQuestionIndex++;
+      // Correct answer - show answer message first
+      this.showAnswerMessage(selectedOption.message);
       
-      if (this.currentQuestionIndex >= this.meetingQuestions.length) {
-        // Meeting completed successfully
-        this.completeMeeting(true);
-      } else {
-        // Show next question
-        this.displayCurrentQuestion();
-      }
+      // Set a flag to advance to next question after message is dismissed
+      this.waitingForKeyPress = true;
+      
+      // Store current question index to check if we need to advance
+      const questionIndex = this.currentQuestionIndex;
+      
+      // Listen for message dismissal in advanceDialogue
+      this.currentQuestionIndex++;
     } else {
       // Wrong answer - show message for 3 seconds and replace a random block with XXL block
       this.showAnswerMessage(selectedOption.message);

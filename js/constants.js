@@ -41,6 +41,7 @@ export const BLOCK_COLORS = {
 // Phaser scene keys
 export const SCENES = {
   BOOT: 'BootScene',
+  START: 'StartScene',
   GAME: 'GameScene',
   GAME_OVER: 'GameOverScene'
 }; 

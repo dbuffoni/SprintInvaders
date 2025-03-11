@@ -26,7 +26,7 @@ class GameScene extends Phaser.Scene {
     super({ key: SCENES.GAME });
   }
 
-  init() {
+  init(data) {
     // Initialize game variables
     this.player = null;
     this.bullets = null;
@@ -42,6 +42,13 @@ class GameScene extends Phaser.Scene {
     this.playerCanShoot = true;
     this.keys = null;
     this.scopeBlockInstances = []; // Store references to ScopeBlock instances
+    
+    // Check if we have an override message index from the StartScene
+    if (data && data.overrideMessageIndex !== undefined) {
+      // Store it in the registry so other entities can access it
+      this.registry.set('overrideMessageIndex', data.overrideMessageIndex);
+      console.log(`GameScene: Developer mode active with message index ${data.overrideMessageIndex}`);
+    }
   }
 
   create() {
