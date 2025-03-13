@@ -19,13 +19,13 @@ class BusinessAnalyst {
         options: [
           { 
             text: "Two days, it's just a quick hash thing, right?", 
-            correct: false, 
-            message: "Thank you! Good point. (20% chance of adding 3 XXL Blocks)" 
+            correct: true, 
+            message: "Thank you! Good point. (80% chance of adding 3 M Blocks)" 
           },
           { 
             text: "Six months, we need to rewrite everything in Rust.", 
-            correct: true, 
-            message: "Let's schedule a six-month kickoff to discuss the timeline. (80% chance of adding 3 M Blocks)" 
+            correct: false, 
+            message: "Let's schedule a six-month kickoff to discuss the timeline. (20% chance of adding 3 XXL Blocks)" 
           }
         ]
       },
@@ -34,13 +34,13 @@ class BusinessAnalyst {
         options: [
           { 
             text: "Four hours, I'll slap some buttons on it.", 
-            correct: false, 
-            message: "Thank you! We'll go with your idea. (20% chance of adding 3 XXL Blocks)"
+            correct: true, 
+            message: "Thank you! We'll go with your idea. (80% chance of adding 3 M Blocks)"
           },
           { 
             text: "Define 'intuitive' in a 10-page spec, then we'll talk.", 
-            correct: true, 
-            message: "Fair point! I'll write that spec—expect it in 2027. (80% chance of adding 3 M Blocks)" 
+            correct: false, 
+            message: "Fair point! I'll write that spec—expect it in 2027. (20% chance of adding 3 XXL Blocks)" 
           }
         ]
       },
@@ -49,13 +49,13 @@ class BusinessAnalyst {
         options: [
           { 
             text: "Ten minutes, it's probably just a typo.", 
-            correct: false, 
-            message: "Thank you! I knew it was an easy fix. (20% chance of adding 3 XXL Blocks)"
+            correct: true, 
+            message: "Thank you! I knew it was an easy fix. (80% chance of adding 3 M Blocks)"
           },
           { 
             text: "Depends—did anyone log it, or are we guessing?", 
-            correct: true, 
-            message: "No ticket, no clue—let's move on before someone notices! (80% chance of adding 3 M Blocks)" 
+            correct: false, 
+            message: "No ticket, no clue—let's move on before someone notices! (20% chance of adding 3 XXL Blocks)" 
           }
         ]
       },
@@ -64,13 +64,13 @@ class BusinessAnalyst {
         options: [
           { 
             text: "One hour, CSS is my jam.", 
-            correct: false, 
-            message: "Perfect! Just what I wanted to hear. (20% chance of adding 3 XXL Blocks)" 
+            correct: true, 
+            message: "Perfect! Just what I wanted to hear. (80% chance of adding 3 M Blocks)" 
           },
           { 
             text: "A month, I'll build a vaporization engine from scratch.", 
-            correct: true, 
-            message: "Genius! I'll pitch 'GlowEngine Pro' to the CEO—let's brainstorm names now! (80% chance of adding 3 M Blocks)" 
+            correct: false, 
+            message: "Genius! I'll pitch 'GlowEngine Pro' to the CEO—let's brainstorm names now! (20% chance of adding 3 XXL Blocks)" 
           }
         ]
       },
@@ -79,13 +79,13 @@ class BusinessAnalyst {
         options: [
           { 
             text: "Next sprint, I'll just copy-paste ChatGPT to it.", 
-            correct: false, 
-            message: "That's the right attitude! Quick and easy. (20% chance of adding 3 XXL Blocks)" 
+            correct: true, 
+            message: "That's the right attitude! Quick and easy. (80% chance of adding 3 M Blocks)" 
           },
           { 
             text: "When Sales learns to code it themselves.", 
-            correct: true, 
-            message: "Ha! I'd pay to see that! Ops... ears everywhere. (80% chance of adding 3 M Blocks)" 
+            correct: false, 
+            message: "Ha! I'd pay to see that! Ops... ears everywhere. (20% chance of adding 3 XXL Blocks)" 
           }
         ]
       },
@@ -95,12 +95,12 @@ class BusinessAnalyst {
           { 
             text: "Five points, it's basically JavaScript, right?", 
             correct: true, 
-            message: "You're absolutely right! Should be easy. (20% chance of adding 3 XXL Blocks)" 
+            message: "You're absolutely right! Should be easy. (80% chance of adding 3 M Blocks)" 
           },
           { 
-            text: "Infinity points, because .... whaaat?", 
+            text: "Infinity points", 
             correct: false, 
-            message: "Let's watch a quantum computing tutorial together right now! (80% chance of adding 3 M Blocks)" 
+            message: "Let's watch a quantum computing tutorial together right now! (20% chance of adding 3 XXL Blocks)" 
           }
         ]
       }

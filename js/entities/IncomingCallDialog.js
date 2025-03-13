@@ -676,17 +676,17 @@ class IncomingCallDialog {
       
       // Apply rewards based on correctness of the answer
       if (selectedOption.correct) {
-        // Correct answer: 20% chance to add 3 XXL Scope Blocks
-        if (Math.random() < 0.2) {
-          if (this.scene && this.scene.createXXLBlocks) {
-            this.scene.createXXLBlocks(3);
-          }
-        }
-      } else {
-        // Incorrect answer: 80% chance to add 3 M Scope Blocks
+        // Correct answer: 80% chance to add 3 M Scope Blocks (switched from 20% XXL)
         if (Math.random() < 0.8) {
           if (this.scene && this.scene.createMBlocks) {
             this.scene.createMBlocks(3);
+          }
+        }
+      } else {
+        // Incorrect answer: 20% chance to add 3 XXL Scope Blocks (switched from 80% M)
+        if (Math.random() < 0.2) {
+          if (this.scene && this.scene.createXXLBlocks) {
+            this.scene.createXXLBlocks(3);
           }
         }
       }
