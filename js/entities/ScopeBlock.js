@@ -28,6 +28,82 @@ class ScopeBlock {
       graphics.destroy();
     }
     
+    // Create left piece texture for this block type
+    const leftPieceTextureKey = `block_${category}_left`;
+    if (!scene.textures.exists(leftPieceTextureKey)) {
+      const graphics = scene.add.graphics();
+      graphics.fillStyle(color, 1);
+      graphics.fillRect(0, 0, width/2 - 2, height);
+      
+      // Add some jagged edges for effect
+      graphics.fillStyle(color, 1);
+      for (let i = 0; i < height; i += 5) {
+        if (i % 2 === 0) {
+          graphics.fillRect(width/2 - 2, i, 2, 3);
+        }
+      }
+      
+      graphics.generateTexture(leftPieceTextureKey, width/2, height);
+      graphics.destroy();
+    }
+    
+    // Create right piece texture for this block type
+    const rightPieceTextureKey = `block_${category}_right`;
+    if (!scene.textures.exists(rightPieceTextureKey)) {
+      const graphics = scene.add.graphics();
+      graphics.fillStyle(color, 1);
+      graphics.fillRect(2, 0, width/2 - 2, height);
+      
+      // Add some jagged edges for effect
+      graphics.fillStyle(color, 1);
+      for (let i = 0; i < height; i += 5) {
+        if (i % 2 !== 0) {
+          graphics.fillRect(0, i, 2, 3);
+        }
+      }
+      
+      graphics.generateTexture(rightPieceTextureKey, width/2, height);
+      graphics.destroy();
+    }
+    
+    // Create invulnerable left piece texture
+    const invulnerableLeftPieceTextureKey = `invulnerable_${category}_left`;
+    if (!scene.textures.exists(invulnerableLeftPieceTextureKey)) {
+      const graphics = scene.add.graphics();
+      graphics.fillStyle(INVULNERABLE_COLOR, 1);
+      graphics.fillRect(0, 0, width/2 - 2, height);
+      
+      // Add some jagged edges for effect
+      graphics.fillStyle(INVULNERABLE_COLOR, 1);
+      for (let i = 0; i < height; i += 5) {
+        if (i % 2 === 0) {
+          graphics.fillRect(width/2 - 2, i, 2, 3);
+        }
+      }
+      
+      graphics.generateTexture(invulnerableLeftPieceTextureKey, width/2, height);
+      graphics.destroy();
+    }
+    
+    // Create invulnerable right piece texture
+    const invulnerableRightPieceTextureKey = `invulnerable_${category}_right`;
+    if (!scene.textures.exists(invulnerableRightPieceTextureKey)) {
+      const graphics = scene.add.graphics();
+      graphics.fillStyle(INVULNERABLE_COLOR, 1);
+      graphics.fillRect(2, 0, width/2 - 2, height);
+      
+      // Add some jagged edges for effect
+      graphics.fillStyle(INVULNERABLE_COLOR, 1);
+      for (let i = 0; i < height; i += 5) {
+        if (i % 2 !== 0) {
+          graphics.fillRect(0, i, 2, 3);
+        }
+      }
+      
+      graphics.generateTexture(invulnerableRightPieceTextureKey, width/2, height);
+      graphics.destroy();
+    }
+    
     // Create the block sprite
     this.sprite = scene.scopeBlocks.create(x, y, textureKey);
     this.sprite.setOrigin(0, 0);
@@ -57,6 +133,13 @@ class ScopeBlock {
     // Initialize dependencies
     this.dependencies = [];
     
+    // Initialize broken status
+    this.broken = false;
+    
+    // Initialize broken pieces (will be created when block breaks)
+    this.leftPiece = null;
+    this.rightPiece = null;
+    
     // Store reference to this ScopeBlock instance on the sprite
     this.sprite.scopeBlockInstance = this;
   }
@@ -68,6 +151,7 @@ class ScopeBlock {
   set x(value) {
     this.sprite.x = value;
     this.textLabel.x = value + this.width / 2;
+    this.updatePiecesPosition();
   }
   
   get y() {
@@ -77,6 +161,7 @@ class ScopeBlock {
   set y(value) {
     this.sprite.y = value;
     this.textLabel.y = value + this.height / 2;
+    this.updatePiecesPosition();
   }
   
   get width() {
@@ -132,7 +217,28 @@ class ScopeBlock {
   
   // Update the visual appearance based on invulnerability status
   updateInvulnerableStatus() {
-    if (this.isInvulnerable()) {
+    const isInvulnerable = this.isInvulnerable();
+    
+    if (this.broken) {
+      // If broken, update the pieces instead of the main sprite
+      if (this.leftPiece && this.rightPiece) {
+        if (isInvulnerable) {
+          this.leftPiece.setTexture(`invulnerable_${this.category}_left`);
+          this.rightPiece.setTexture(`invulnerable_${this.category}_right`);
+          this.leftPiece.setAlpha(INVULNERABLE_ALPHA);
+          this.rightPiece.setAlpha(INVULNERABLE_ALPHA);
+        } else {
+          this.leftPiece.setTexture(`block_${this.category}_left`);
+          this.rightPiece.setTexture(`block_${this.category}_right`);
+          this.leftPiece.setAlpha(1);
+          this.rightPiece.setAlpha(1);
+        }
+      }
+      return;
+    }
+    
+    // Original block is not broken
+    if (isInvulnerable) {
       // Store original texture key if not already stored
       if (!this.sprite.originalTextureKey) {
         this.sprite.originalTextureKey = this.sprite.texture.key;
@@ -165,10 +271,15 @@ class ScopeBlock {
   }
   
   hit() {
-    // If block is invulnerable, it won't take damage
+    // If block is invulnerable, it won't take damage but will still show broken effect
     if (this.isInvulnerable()) {
       // Play invulnerable hit animation
       this.playInvulnerableHitAnimation();
+      
+      // Set to broken state visually, without reducing hits
+      if (!this.broken) {
+        this.setBrokenState();
+      }
       
       return false; // Block shouldn't be destroyed
     }
@@ -179,68 +290,272 @@ class ScopeBlock {
     // Decrease hits remaining
     this.hitsRemaining--;
     
+    // Add special successful hit blinking effect
+    this.playSuccessfulHitEffect();
+    
+    // Set to broken state if not already broken and not going to be destroyed
+    if (!this.broken && this.hitsRemaining > 0) {
+      this.setBrokenState();
+    }
+    
     // Return true if block should be destroyed
     return this.hitsRemaining <= 0;
   }
   
+  // Set block to broken state
+  setBrokenState() {
+    if (this.broken) return; // Already broken
+    
+    this.broken = true;
+    
+    // Create the two broken pieces
+    const isInvulnerable = this.isInvulnerable();
+    const leftTextureKey = isInvulnerable ? 
+      `invulnerable_${this.category}_left` : `block_${this.category}_left`;
+    const rightTextureKey = isInvulnerable ? 
+      `invulnerable_${this.category}_right` : `block_${this.category}_right`;
+    
+    // Get the original sprite position
+    const centerX = this.sprite.x + this.width / 2;
+    const centerY = this.sprite.y + this.height / 2;
+    
+    // Create left piece slightly to the left and rotated
+    this.leftPiece = this.scene.physics.add.sprite(
+      centerX - this.width / 4, 
+      centerY, 
+      leftTextureKey
+    );
+    this.leftPiece.setOrigin(0.5, 0.5); // Origin at center for rotation
+    
+    // Create right piece slightly to the right and rotated
+    this.rightPiece = this.scene.physics.add.sprite(
+      centerX + this.width / 4, 
+      centerY, 
+      rightTextureKey
+    );
+    this.rightPiece.setOrigin(0.5, 0.5); // Origin at center for rotation
+    
+    // Set alpha if invulnerable
+    if (isInvulnerable) {
+      this.leftPiece.setAlpha(INVULNERABLE_ALPHA);
+      this.rightPiece.setAlpha(INVULNERABLE_ALPHA);
+    }
+    
+    // Hide the original sprite (keep it for physics and logic)
+    this.sprite.setVisible(false);
+    
+    // Apply rotation animation effect with REVERSED directions
+    this.scene.tweens.add({
+      targets: this.leftPiece,
+      angle: 10, // Changed from -10 to 10
+      duration: 200,
+      ease: 'Power2',
+    });
+    
+    this.scene.tweens.add({
+      targets: this.rightPiece,
+      angle: -10, // Changed from 10 to -10
+      duration: 200,
+      ease: 'Power2',
+    });
+    
+    // Add blinking effect
+    const originalTint = this.leftPiece.tint;
+    
+    // Flash sequence: red, white, normal
+    this.leftPiece.setTint(0xff0000);
+    this.rightPiece.setTint(0xff0000);
+    
+    this.scene.time.delayedCall(80, () => {
+      this.leftPiece.setTint(0xffffff);
+      this.rightPiece.setTint(0xffffff);
+      
+      this.scene.time.delayedCall(80, () => {
+        this.leftPiece.setTint(originalTint);
+        this.rightPiece.setTint(originalTint);
+      });
+    });
+  }
+  
+  // Update pieces position to follow the main sprite
+  updatePiecesPosition() {
+    if (this.broken && this.leftPiece && this.rightPiece) {
+      const centerX = this.sprite.x + this.width / 2;
+      const centerY = this.sprite.y + this.height / 2;
+      
+      this.leftPiece.x = centerX - this.width / 4;
+      this.leftPiece.y = centerY;
+      
+      this.rightPiece.x = centerX + this.width / 4;
+      this.rightPiece.y = centerY;
+    }
+  }
+  
   // Animation for when an invulnerable block is hit
   playInvulnerableHitAnimation() {
-    // Flash the block
-    const originalAlpha = this.sprite.alpha;
-    const originalY = this.sprite.y; // Store original Y position
-    
-    // Flash brighter
-    this.scene.tweens.add({
-      targets: this.sprite,
-      alpha: 1,
-      duration: 50,
-      yoyo: true,
-      repeat: 2,
-      onComplete: () => {
-        this.sprite.setAlpha(originalAlpha);
+    // Flash the block/pieces without causing alignment issues
+    if (this.broken) {
+      // Flash the pieces
+      if (this.leftPiece && this.rightPiece) {
+        const originalAlpha = this.leftPiece.alpha;
+        
+        // Flash brighter
+        this.scene.tweens.add({
+          targets: [this.leftPiece, this.rightPiece],
+          alpha: 1,
+          duration: 50,
+          yoyo: true,
+          repeat: 2,
+          onComplete: () => {
+            this.leftPiece.setAlpha(originalAlpha);
+            this.rightPiece.setAlpha(originalAlpha);
+          }
+        });
       }
-    });
-    
-    // Slight bounce effect with proper position restoration
-    this.scene.tweens.add({
-      targets: this.sprite,
-      y: originalY - 5,
-      duration: 50,
-      yoyo: true,
-      ease: 'Power2',
-      onComplete: () => {
-        // Ensure position is restored
-        this.sprite.y = originalY;
-        // Also update text position
-        this.textLabel.y = originalY + this.height / 2;
-      }
-    });
+    } else {
+      // Flash the original sprite
+      const originalAlpha = this.sprite.alpha;
+      
+      // Flash brighter
+      this.scene.tweens.add({
+        targets: this.sprite,
+        alpha: 1,
+        duration: 50,
+        yoyo: true,
+        repeat: 2,
+        onComplete: () => {
+          this.sprite.setAlpha(originalAlpha);
+        }
+      });
+    }
   }
   
   // Animation for when a normal block is hit
   playNormalHitAnimation() {
-    // Blink the block without moving
-    const originalTint = this.sprite.tint;
-    
-    // Default animation for blocks
-    // Flash sequence: red, white, red, normal
-    // First flash to red
-    this.sprite.setTint(0xff0000);
-    
-    // Then to white
-    this.scene.time.delayedCall(80, () => {
-      this.sprite.setTint(0xffffff);
-      
-      // Back to red
-      this.scene.time.delayedCall(80, () => {
-        this.sprite.setTint(0xff0000);
+    if (this.broken) {
+      // Flash the pieces
+      if (this.leftPiece && this.rightPiece) {
+        const originalTint = this.leftPiece.tint;
         
-        // Finally back to normal
+        // Flash red
+        this.leftPiece.setTint(0xff0000);
+        this.rightPiece.setTint(0xff0000);
+        
+        // Then to white
         this.scene.time.delayedCall(80, () => {
+          this.leftPiece.setTint(0xffffff);
+          this.rightPiece.setTint(0xffffff);
+          
+          // Finally back to normal
+          this.scene.time.delayedCall(80, () => {
+            this.leftPiece.setTint(originalTint);
+            this.rightPiece.setTint(originalTint);
+          });
+        });
+      }
+    } else {
+      // Flash the original sprite
+      const originalTint = this.sprite.tint;
+      
+      // Flash red
+      this.sprite.setTint(0xff0000);
+      
+      // Then to white
+      this.scene.time.delayedCall(80, () => {
+        this.sprite.setTint(0xffffff);
+        
+        // Back to red
+        this.scene.time.delayedCall(80, () => {
+          this.sprite.setTint(0xff0000);
+          
+          // Finally back to normal
+          this.scene.time.delayedCall(80, () => {
+            this.sprite.setTint(originalTint);
+          });
+        });
+      });
+    }
+  }
+  
+  // Special effect for successful (non-invulnerable) hits
+  playSuccessfulHitEffect() {
+    // Apply to either the main sprite or the broken pieces
+    if (this.broken) {
+      if (this.leftPiece && this.rightPiece) {
+        // Store original scales
+        const originalScaleX = this.leftPiece.scaleX;
+        const originalScaleY = this.leftPiece.scaleY;
+        
+        // Create a sequence of scale changes for a "pulse" effect
+        this.scene.tweens.add({
+          targets: [this.leftPiece, this.rightPiece],
+          scaleX: originalScaleX * 1.2,
+          scaleY: originalScaleY * 1.2,
+          duration: 100,
+          yoyo: true,
+          repeat: 1,
+          ease: 'Sine.easeInOut',
+          onComplete: () => {
+            // Ensure original scale is restored
+            this.leftPiece.setScale(originalScaleX, originalScaleY);
+            this.rightPiece.setScale(originalScaleX, originalScaleY);
+          }
+        });
+        
+        // Add an intense bright flash
+        const originalTint = this.leftPiece.tint;
+        
+        // Bright yellow flash
+        this.leftPiece.setTint(0xffff00);
+        this.rightPiece.setTint(0xffff00);
+        
+        // Then to bright cyan
+        this.scene.time.delayedCall(100, () => {
+          this.leftPiece.setTint(0x00ffff);
+          this.rightPiece.setTint(0x00ffff);
+          
+          // Back to normal
+          this.scene.time.delayedCall(100, () => {
+            this.leftPiece.setTint(originalTint);
+            this.rightPiece.setTint(originalTint);
+          });
+        });
+      }
+    } else {
+      // For intact blocks
+      const originalScale = this.sprite.scale;
+      
+      // Pulse animation
+      this.scene.tweens.add({
+        targets: this.sprite,
+        scaleX: originalScale * 1.2,
+        scaleY: originalScale * 1.2,
+        duration: 100,
+        yoyo: true,
+        repeat: 1,
+        ease: 'Sine.easeInOut',
+        onComplete: () => {
+          // Ensure original scale is restored
+          this.sprite.setScale(originalScale);
+        }
+      });
+      
+      // Add a distinct color flash sequence different from the normal hit animation
+      const originalTint = this.sprite.tint;
+      
+      // Bright yellow flash
+      this.sprite.setTint(0xffff00);
+      
+      // Then to bright cyan
+      this.scene.time.delayedCall(100, () => {
+        this.sprite.setTint(0x00ffff);
+        
+        // Back to normal
+        this.scene.time.delayedCall(100, () => {
           this.sprite.setTint(originalTint);
         });
       });
-    });
+    }
   }
   
   destroy() {
@@ -255,6 +570,10 @@ class ScopeBlock {
     
     // Remove the block's text label
     this.textLabel.destroy();
+    
+    // Remove the pieces if they exist
+    if (this.leftPiece) this.leftPiece.destroy();
+    if (this.rightPiece) this.rightPiece.destroy();
     
     // Remove the block
     this.sprite.destroy();
