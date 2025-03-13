@@ -801,6 +801,136 @@ class GameScene extends Phaser.Scene {
     
     return xxlBlock;
   }
+  
+  // Method to create multiple M blocks for meeting rewards
+  createMBlocks(count) {
+    console.log(`Creating ${count} M blocks in GameScene`);
+    
+    const existingBlocks = this.scopeBlockInstances;
+    const blocksCreated = [];
+    
+    // Find the lowest block (with highest Y value) that is still active
+    let lowestY = START_Y;
+    let lowestBlock = null;
+    
+    for (const block of existingBlocks) {
+      if (block.sprite && block.sprite.active && block.sprite.y > lowestY) {
+        lowestY = block.sprite.y;
+        lowestBlock = block;
+      }
+    }
+    
+    // Calculate position below the lowest block
+    // If no blocks exist, use a default position near the bottom of the playable area
+    const blockY = lowestBlock ? lowestY + V_SPACING : PLAYABLE_HEIGHT - 150;
+    
+    // Create the blocks slightly spaced horizontally
+    for (let i = 0; i < count; i++) {
+      // Calculate x position with slight spacing between blocks
+      const middleX = CANVAS_WIDTH / 2 - BLOCK_WIDTH / 2;
+      const offsetX = (i - Math.floor(count/2)) * (BLOCK_WIDTH + 10); // Space blocks 10px apart
+      const finalX = Math.max(20, Math.min(CANVAS_WIDTH - BLOCK_WIDTH - 20, middleX + offsetX));
+      
+      // Create the M block
+      const mBlock = new ScopeBlock(this, finalX, blockY, 'M');
+      this.scopeBlockInstances.push(mBlock);
+      blocksCreated.push(mBlock);
+    }
+    
+    // Add a visual notification
+    const message = count > 1 ? `${count} M BLOCKS ADDED!` : `M BLOCK ADDED!`;
+    const notification = this.add.text(
+      CANVAS_WIDTH / 2,
+      PLAYABLE_HEIGHT / 3,
+      `💻 ${message} 💻`,
+      {
+        font: '24px Arial',
+        fill: '#FFFF00',
+        stroke: '#000000',
+        strokeThickness: 3,
+        backgroundColor: '#00000080',
+        padding: { x: 10, y: 5 }
+      }
+    );
+    notification.setOrigin(0.5, 0.5);
+    notification.setDepth(1000);
+    
+    // Fade out and destroy the notification after a short duration
+    this.tweens.add({
+      targets: notification,
+      alpha: 0,
+      y: PLAYABLE_HEIGHT / 3 - 50,
+      duration: 2000,
+      onComplete: () => notification.destroy()
+    });
+    
+    return blocksCreated;
+  }
+  
+  // Method to create multiple XXL blocks for meeting rewards
+  createXXLBlocks(count) {
+    console.log(`Creating ${count} XXL blocks in GameScene`);
+    
+    const existingBlocks = this.scopeBlockInstances;
+    const blocksCreated = [];
+    
+    // Find the lowest block (with highest Y value) that is still active
+    let lowestY = START_Y;
+    let lowestBlock = null;
+    
+    for (const block of existingBlocks) {
+      if (block.sprite && block.sprite.active && block.sprite.y > lowestY) {
+        lowestY = block.sprite.y;
+        lowestBlock = block;
+      }
+    }
+    
+    // Calculate position below the lowest block
+    // If no blocks exist, use a default position near the bottom of the playable area
+    const blockY = lowestBlock ? lowestY + V_SPACING : PLAYABLE_HEIGHT - 150;
+    
+    // Create the blocks slightly spaced horizontally
+    for (let i = 0; i < count; i++) {
+      // Calculate x position with slight spacing between blocks
+      const middleX = CANVAS_WIDTH / 2 - BLOCK_WIDTH / 2;
+      const offsetX = (i - Math.floor(count/2)) * (BLOCK_WIDTH + 10); // Space blocks 10px apart
+      const finalX = Math.max(20, Math.min(CANVAS_WIDTH - BLOCK_WIDTH - 20, middleX + offsetX));
+      
+      // Create the XXL block
+      const xxlBlock = new ScopeBlock(this, finalX, blockY, 'XXL');
+      this.scopeBlockInstances.push(xxlBlock);
+      blocksCreated.push(xxlBlock);
+    }
+    
+    // Add a visual notification
+    const message = count > 1 ? `${count} XXL BLOCKS ADDED!` : `XXL BLOCK ADDED!`;
+    const notification = this.add.text(
+      CANVAS_WIDTH / 2,
+      PLAYABLE_HEIGHT / 3,
+      `⚠️ ${message} ⚠️`,
+      {
+        font: '24px Arial',
+        fill: '#FF0000',
+        stroke: '#000000',
+        strokeThickness: 3,
+        backgroundColor: '#00000080',
+        padding: { x: 10, y: 5 }
+      }
+    );
+    notification.setOrigin(0.5, 0.5);
+    notification.setDepth(1000);
+    
+    // Fade out and destroy the notification after a short duration
+    this.tweens.add({
+      targets: notification,
+      alpha: 0,
+      y: PLAYABLE_HEIGHT / 3 - 50,
+      duration: 2000,
+      onComplete: () => notification.destroy()
+    });
+    
+    return blocksCreated;
+  }
 } 
 
 export default GameScene; 

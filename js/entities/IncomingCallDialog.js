@@ -645,13 +645,8 @@ class IncomingCallDialog {
       this.showingAnswerMessage = false;
       this.answerMessageTimer = 0;
       
-      // Move to next question or end the meeting
-      this.currentQuestionIndex++;
-      if (this.currentQuestionIndex < this.meetingQuestions.length) {
-        this.displayCurrentQuestion();
-      } else {
-        this.endMeeting();
-      }
+      // End the meeting (since we now only have 1 question)
+      this.endMeeting();
       return;
     }
     
@@ -678,6 +673,23 @@ class IncomingCallDialog {
       this.optionAText.setVisible(false);
       this.optionBText.setVisible(false);
       this.promptText.setText("Press UP/DOWN to continue");
+      
+      // Apply rewards based on correctness of the answer
+      if (selectedOption.correct) {
+        // Correct answer: 20% chance to add 3 XXL Scope Blocks
+        if (Math.random() < 0.2) {
+          if (this.scene && this.scene.createXXLBlocks) {
+            this.scene.createXXLBlocks(3);
+          }
+        }
+      } else {
+        // Incorrect answer: 80% chance to add 3 M Scope Blocks
+        if (Math.random() < 0.8) {
+          if (this.scene && this.scene.createMBlocks) {
+            this.scene.createMBlocks(3);
+          }
+        }
+      }
     }
   }
   
@@ -719,13 +731,13 @@ class IncomingCallDialog {
     
     // Get meeting questions from the character
     if (this.character && this.character.meetingQuestions) {
-      // Shuffle the questions and pick 3
+      // Shuffle the questions and pick 1 (changed from 3)
       const shuffledQuestions = Phaser.Utils.Array.Shuffle([...this.character.meetingQuestions]);
-      this.meetingQuestions = shuffledQuestions.slice(0, 3);
+      this.meetingQuestions = shuffledQuestions.slice(0, 1); // Only pick 1 question
       this.currentQuestionIndex = 0;
       this.selectedOptionIndex = 0;
       
-      console.log(`Selected ${this.meetingQuestions.length} questions for meeting mode`);
+      console.log(`Selected ${this.meetingQuestions.length} question for meeting mode`);
     } else {
       console.error('Character has no meeting questions defined');
       // Fallback to empty array
