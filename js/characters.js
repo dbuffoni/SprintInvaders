@@ -9,7 +9,7 @@ class BusinessAnalyst {
     this.effects = [
       'addXXLBlock',
       'lockWeapon',
-      'meetingMode'
+      'meeting'
     ];
     
     // Meeting mode questions and options
