@@ -1,5 +1,5 @@
 // Import constants
-import { BLOCK_COLORS, PLAYABLE_HEIGHT, INVULNERABLE_ALPHA, INVULNERABLE_COLOR } from '../constants.js';
+import { BLOCK_COLORS, PLAYABLE_HEIGHT, INVULNERABLE_ALPHA, INVULNERABLE_COLOR, BLOCK_WIDTH, BLOCK_HEIGHT } from '../constants.js';
 import { getCharacter } from '../characters.js';
 
 class ScopeBlock {
@@ -8,8 +8,8 @@ class ScopeBlock {
     this.category = category;
     
     // Determine block properties based on category
-    const width = 50; // All blocks have the same width now
-    const height = 30; // All blocks have the same height now
+    const width = BLOCK_WIDTH; // Use constant instead of hardcoded value
+    const height = BLOCK_HEIGHT; // Use constant instead of hardcoded value
     // Store hits temporarily in a local variable instead of setting this.hitsRemaining directly
     const hits = category === 'S' ? 1 : 
                  category === 'M' ? 2 : 

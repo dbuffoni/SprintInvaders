@@ -6,31 +6,6 @@ export const INCOMING_CALL_DIALOG_HEIGHT = 252; // Increased by 40% from 180 to 
 export const BACKGROUND_COLOR = 0x141414; // Phaser uses hex color format
 export const HEADER_HEIGHT = 30; // Height of the incoming call dialog header line
 
-// Block dimensions
-export const BLOCK_WIDTH = 50; // Default block width (matches ScopeBlock's default width)
-export const BLOCK_HEIGHT = 30; // Default block height (matches ScopeBlock's default height)
-
-// Grid configuration for scope blocks
-export const ROWS = 5;
-export const COLS = 7;
-export const START_X = 50;
-export const START_Y = 50;
-export const H_SPACING = 70; // Horizontal spacing
-export const V_SPACING = 40; // Vertical spacing
-export const DROP_AMOUNT = 20; // Vertical drop when reversing
-
-// Block categories
-export const CATEGORIES = ['S', 'M', 'L']; 
-// XXL is a special category only added by the Business Analyst
-// IC is a special category for Incoming Call, which triggers character actions
-
-// Block size proportions (probability of each type appearing)
-export const BLOCK_PROPORTIONS = {
-  'S': 0.3,  // 40% chance of Small blocks
-  'M': 0.4,  // 40% chance of Medium blocks
-  'L': 0.3   // 20% chance of Large blocks
-};
-
 // Game states
 export const GAME_STATES = {
   PLAYING: "playing",
@@ -40,14 +15,6 @@ export const GAME_STATES = {
   PAUSED: "paused"
 }; 
 
-// Phaser colors for blocks (hex format) - Darker colors for better text readability
-export const BLOCK_COLORS = {
-  'S': 0x008800, // Darker Green
-  'M': 0xCCCC00, // Darker Yellow
-  'L': 0xCC0000, // Darker Red
-  'XXL': 0x660066, // Darker Purple
-};
-
 // Phaser scene keys
 export const SCENES = {
   BOOT: 'BootScene',
@@ -56,11 +23,53 @@ export const SCENES = {
   GAME_OVER: 'GameOverScene'
 }; 
 
+// Block dimensions and grid configuration 
+export const BLOCK_WIDTH = 50; // Default block width (matches ScopeBlock's default width)
+export const BLOCK_HEIGHT = 30; // Default block height (matches ScopeBlock's default height)
+export const ROWS = 5;
+export const COLS = 7;
+export const START_X = 50;
+export const START_Y = 50;
+export const H_SPACING = 70; // Horizontal spacing
+export const V_SPACING = 40; // Vertical spacing
+export const DROP_AMOUNT = 20; // Vertical drop when reversing
+
+// Block categories and properties
+export const CATEGORIES = ['S', 'M', 'L']; 
+// XXL is a special category only added by the Business Analyst
+// IC is a special category for Incoming Call, which triggers character actions
+
+// Block size proportions (probability of each type appearing)
+export const BLOCK_PROPORTIONS = {
+  'S': 0.3,  // 30% chance of Small blocks
+  'M': 0.4,  // 40% chance of Medium blocks
+  'L': 0.3   // 30% chance of Large blocks
+};
+
+// Phaser colors for blocks (hex format) - Darker colors for better text readability
+export const BLOCK_COLORS = {
+  'S': 0x008800, // Darker Green
+  'M': 0xCCCC00, // Darker Yellow
+  'L': 0xCC0000, // Darker Red
+  'XXL': 0x660066, // Darker Purple
+};
+
 // Block dependency constants
 export const MAX_DEPENDENCIES = 2; // Maximum number of dependencies a block can have
 export const DEPENDENCY_CHANCE = 0.5; // Chance that a block will have a dependency when created
 export const INVULNERABLE_ALPHA = 0.7; // Alpha value for invulnerable blocks
 export const INVULNERABLE_COLOR = 0x808080; // Gray color for invulnerable blocks
+
+// Bullet constants
+export const BULLET_WIDTH = 5;
+export const BULLET_HEIGHT = 10;
+export const BULLET_COLOR = 0xFFFF00; // Yellow
+export const BULLET_SPEED = 350;
+
+// Player constants
+export const PLAYER_WIDTH = 30;
+export const PLAYER_HEIGHT = 20;
+export const PLAYER_COLOR = 0x00FFFF; // Cyan
 
 // Incoming Call constants
 export const INCOMING_CALL_FALL_SPEED = 100; // Speed at which incoming calls fall

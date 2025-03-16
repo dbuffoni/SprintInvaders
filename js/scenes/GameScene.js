@@ -47,7 +47,7 @@ class GameScene extends Phaser.Scene {
     this.ufos = []; // To store active UFOs
     this.coffeeCups = 3;
     this.score = 0;
-    this.gameState = GAME_STATES.PLAYING;
+    this.gameState = GAME_STATES.PAUSED; // Start paused until the notification completes
     this.groupDirection = 1; // 1 for right, -1 for left
     this.groupSpeed = 1; // Horizontal speed of blocks
     this.justDropped = false; // Prevents multiple drops
@@ -554,40 +554,10 @@ class GameScene extends Phaser.Scene {
     this.ufoCount++;
     this.ufosToSpawn--;
     
-    // Show UFO spawned notification
-    this.showUFONotification();
-    
     // Change header text to UFO warning
     if (this.scrumBoard) {
       this.scrumBoard.setUFOHeader();
     }
-  }
-  
-  showUFONotification() {
-    // Create a notification text
-    const notification = this.add.text(
-      CANVAS_WIDTH / 2,
-      PLAYABLE_HEIGHT / 4,
-      'UFO INCOMING!',
-      {
-        font: '24px Arial',
-        fontStyle: 'bold',
-        fill: '#FF0000',
-        stroke: '#000000',
-        strokeThickness: 2
-      }
-    );
-    notification.setOrigin(0.5);
-    
-    // Add a brief flash
-    this.tweens.add({
-      targets: notification,
-      alpha: 0,
-      duration: 1000,
-      onComplete: () => {
-        notification.destroy();
-      }
-    });
   }
   
   updateUFOs() {
@@ -727,17 +697,17 @@ class GameScene extends Phaser.Scene {
     
     // Show a notification for new sprint
     this.showSprintNotification();
-    
-    // Set game state back to playing
-    this.gameState = GAME_STATES.PLAYING;
   }
   
   showSprintNotification() {
+    // Pause the game during the notification
+    this.gameState = GAME_STATES.PAUSED;
+    
     // Create a sprint notification text
     const sprintNotification = this.add.text(
       CANVAS_WIDTH / 2,
       PLAYABLE_HEIGHT * 2 / 3,
-      `Starting Sprint ${this.sprintCount}!`,
+      `Starting Sprint ${this.sprintCount}\n\nGet ready Dev-1`,
       {
         font: '28px Arial',
         fontStyle: 'bold',
@@ -750,11 +720,12 @@ class GameScene extends Phaser.Scene {
     this.tweens.add({
       targets: sprintNotification,
       scale: { from: 0.5, to: 1.5 },
-      alpha: { from: 1, to: 0 },
       ease: 'Power2',
-      duration: 2000,
+      duration: 3000,
       onComplete: () => {
+        // When animation completes, destroy the notification and resume the game
         sprintNotification.destroy();
+        this.gameState = GAME_STATES.PLAYING;
       }
     });
   }

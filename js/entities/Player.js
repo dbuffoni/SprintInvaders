@@ -1,5 +1,5 @@
 // Import constants
-import { CANVAS_WIDTH, SCENES } from '../constants.js';
+import { CANVAS_WIDTH, SCENES, PLAYER_WIDTH, PLAYER_HEIGHT, PLAYER_COLOR } from '../constants.js';
 
 class Player {
   constructor(scene, x, y) {
@@ -7,17 +7,17 @@ class Player {
     
     // Create the player sprite
     this.sprite = scene.physics.add.sprite(x, y, 'player');
-    this.sprite.setSize(30, 20);
-    this.sprite.setDisplaySize(30, 20);
+    this.sprite.setSize(PLAYER_WIDTH, PLAYER_HEIGHT);
+    this.sprite.setDisplaySize(PLAYER_WIDTH, PLAYER_HEIGHT);
     this.sprite.setOrigin(0, 0);
     this.sprite.setImmovable(true);
     
     // Create player texture if it doesn't exist
     if (!scene.textures.exists('player')) {
       const graphics = scene.add.graphics();
-      graphics.fillStyle(0x00FFFF, 1); // Cyan
-      graphics.fillRect(0, 0, 30, 20);
-      graphics.generateTexture('player', 30, 20);
+      graphics.fillStyle(PLAYER_COLOR, 1);
+      graphics.fillRect(0, 0, PLAYER_WIDTH, PLAYER_HEIGHT);
+      graphics.generateTexture('player', PLAYER_WIDTH, PLAYER_HEIGHT);
       graphics.destroy();
     }
     
