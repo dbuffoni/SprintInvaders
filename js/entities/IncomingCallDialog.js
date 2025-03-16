@@ -251,7 +251,14 @@ class IncomingCallDialog {
   // Stop blinking animation
   stopBlinking() {
     this.isBlinking = false;
-    this.titleBox.fillColor = 0x4b6584; // Reset to default color
+    
+    // Reset to the character's color if a character is active, otherwise use default
+    if (this.character) {
+      const titleBoxColor = this.character.isEvil ? 0xC70039 : 0x2E8B57; // Crimson for evil, SeaGreen for good
+      this.titleBox.fillColor = titleBoxColor;
+    } else {
+      this.titleBox.fillColor = 0x4b6584; // Default color
+    }
   }
   
   activate(character) {
@@ -276,6 +283,10 @@ class IncomingCallDialog {
     console.log(`Activating IncomingCallDialog with character: ${character.name}`);
     this.active = true;
     this.character = character;
+    
+    // Change the title box color based on whether the character is good or evil
+    const titleBoxColor = character.isEvil ? 0xC70039 : 0x2E8B57; // Crimson for evil, SeaGreen for good
+    this.titleBox.fillColor = titleBoxColor;
     
     // Store the current game state and set it to PAUSED
     this.previousGameState = this.scene.gameState;
@@ -547,41 +558,41 @@ class IncomingCallDialog {
             fill: '#FF0000',
             stroke: '#000000',
             strokeThickness: 3,
-            backgroundColor: '#00000080',
-            padding: { x: 10, y: 5 }
+            align: 'center'
           }
         );
         timerDisplay.setOrigin(0.5, 0);
         timerDisplay.setDepth(1000);
-        timerDisplay.setScrollFactor(0); // Make it stick to the camera
         
-        // Create a timer that updates the display every second
-        let remainingTime = lockDuration;
-        const updateInterval = 1000; // 1 second interval
+        // Set up a timer to count down and unlock the weapon
+        let countdown = lockDuration;
         
-        // Define the timer update function
+        // Define an update function for the timer
         const updateTimer = () => {
-          remainingTime--;
-          if (remainingTime <= 0) {
-            // Time's up, unlock weapon
-            if (this.scene && this.scene.playerCanShoot !== undefined) {
-              this.scene.playerCanShoot = true;
-              this.weaponLockActive = false;
+          countdown--;
+          timerDisplay.setText('WEAPON LOCKED: ' + countdown + 's');
+          
+          // Check if countdown has reached zero
+          if (countdown <= 0) {
+            // Unlock the weapon
+            this.scene.playerCanShoot = true;
+            this.weaponLockActive = false;
+            
+            // Display an unlocked message briefly
+            timerDisplay.setText('WEAPON UNLOCKED!');
+            timerDisplay.setFill('#00FF00');
+            
+            // Remove the timer display after a brief delay
+            this.scene.time.delayedCall(1000, () => {
               timerDisplay.destroy();
-              console.log('Weapon unlocked after timeout');
-            }
-            return;
+            });
+          } else {
+            // Continue the countdown
+            this.scene.time.delayedCall(1000, updateTimer);
           }
-          
-          // Update the display text
-          timerDisplay.setText('WEAPON LOCKED: ' + remainingTime + 's');
-          
-          // Schedule next update
-          this.scene.time.delayedCall(updateInterval, updateTimer);
         };
         
-        // Start the timer updates immediately when the dialog is closed
-        // This ensures the weapon lock starts in sync with the visual countdown
+        // Wait for the dialog closed event to start the timer
         this.scene.events.once('dialogClosed', () => {
           // Start the first update immediately
           updateTimer();
@@ -607,15 +618,137 @@ class IncomingCallDialog {
           this.scene.time.delayedCall(500, () => {
             this._blockBeingCreated = false;
           });
-        } else {
-          console.log('Cannot create XXL block - method not found in scene or block creation in progress');
         }
         break;
         
-      // Add other effects as needed
+      // New effects for the Stageur character
+      case 'addCoffee':
+        // Add a coffee cup (extra life)
+        if (this.scene) {
+          console.log('Adding coffee cup (extra life)');
+          this.scene.coffeeCups = Math.min(this.scene.coffeeCups + 1, 5); // Max 5 coffee cups
+          this.scene.updateCoffeeCupsDisplay();
+          
+          // Show a visual notification
+          const coffeeText = this.scene.add.text(
+            this.scene.cameras.main.width / 2,
+            100,
+            '☕ COFFEE ADDED! ☕',
+            {
+              font: '22px Arial',
+              fill: '#00FF00',
+              stroke: '#000000',
+              strokeThickness: 3,
+              align: 'center'
+            }
+          );
+          coffeeText.setOrigin(0.5, 0.5);
+          coffeeText.setDepth(1000);
+          
+          // Fade out and destroy the text after a short duration
+          this.scene.tweens.add({
+            targets: coffeeText,
+            alpha: 0,
+            y: 50,
+            duration: 2000,
+            onComplete: () => coffeeText.destroy()
+          });
+        }
+        break;
       
+      case 'cleanCode':
+        // Remove some small blocks from the board
+        if (this.scene) {
+          console.log('Cleaning code - removing some small (S) blocks');
+          
+          // Find all small blocks
+          const smallBlocks = this.scene.scopeBlockInstances.filter(block => 
+            block && block.active && block.category === 'S' && !block.hasActiveDependencies());
+          
+          // Remove up to 3 small blocks if available
+          const blocksToRemove = Math.min(smallBlocks.length, 3);
+          for (let i = 0; i < blocksToRemove; i++) {
+            if (smallBlocks[i]) {
+              smallBlocks[i].destroy();
+            }
+          }
+          
+          // Show a visual notification
+          const cleanText = this.scene.add.text(
+            this.scene.cameras.main.width / 2,
+            100,
+            `CODE CLEANED! REMOVED ${blocksToRemove} BLOCKS`,
+            {
+              font: '22px Arial',
+              fill: '#00FF00',
+              stroke: '#000000',
+              strokeThickness: 3,
+              align: 'center'
+            }
+          );
+          cleanText.setOrigin(0.5, 0.5);
+          cleanText.setDepth(1000);
+          
+          // Fade out and destroy the text after a short duration
+          this.scene.tweens.add({
+            targets: cleanText,
+            alpha: 0,
+            y: 50,
+            duration: 2000,
+            onComplete: () => cleanText.destroy()
+          });
+        }
+        break;
+      
+      case 'fixBugs':
+        // Remove a random medium or large block
+        if (this.scene) {
+          console.log('Fixing bugs - removing one medium or large block');
+          
+          // Find all medium and large blocks
+          const buggyBlocks = this.scene.scopeBlockInstances.filter(block => 
+            block && block.active && (block.category === 'M' || block.category === 'L') && !block.hasActiveDependencies());
+          
+          // Remove one block if available
+          if (buggyBlocks.length > 0) {
+            // Select a random block to remove
+            const randomIndex = Math.floor(Math.random() * buggyBlocks.length);
+            const targetBlock = buggyBlocks[randomIndex];
+            
+            if (targetBlock) {
+              targetBlock.destroy();
+              
+              // Show a visual notification
+              const bugFixText = this.scene.add.text(
+                this.scene.cameras.main.width / 2,
+                100,
+                `BUG FIXED! REMOVED ${targetBlock.category} BLOCK`,
+                {
+                  font: '22px Arial',
+                  fill: '#00FF00',
+                  stroke: '#000000',
+                  strokeThickness: 3,
+                  align: 'center'
+                }
+              );
+              bugFixText.setOrigin(0.5, 0.5);
+              bugFixText.setDepth(1000);
+              
+              // Fade out and destroy the text after a short duration
+              this.scene.tweens.add({
+                targets: bugFixText,
+                alpha: 0,
+                y: 50,
+                duration: 2000,
+                onComplete: () => bugFixText.destroy()
+              });
+            }
+          }
+        }
+        break;
+        
       default:
-        console.log(`No specific implementation for effect: ${this.currentEffect}`);
+        console.log(`Unknown effect: ${this.currentEffect}`);
         break;
     }
   }

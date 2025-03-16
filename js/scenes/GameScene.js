@@ -285,6 +285,15 @@ class GameScene extends Phaser.Scene {
       null,
       this
     );
+    
+    // Add collision between player and incoming calls
+    this.physics.add.collider(
+      this.player.sprite,
+      this.incomingCallGroup,
+      this.handlePlayerIncomingCallCollision,
+      null,
+      this
+    );
   }
   
   setupBlockCollisions() {
@@ -731,8 +740,14 @@ class GameScene extends Phaser.Scene {
     // Get the incoming call instance from the sprite
     const call = callSprite.incomingCallInstance;
     if (call) {
-      // Make the call explode
-      call.explode();
+      // Different behavior based on alignment
+      if (call.character.isEvil) {
+        // Evil calls explode when shot
+        call.explode();
+      } else {
+        // Good calls use the shotDown method without absorption effect
+        call.shotDown();
+      }
       
       // Destroy the bullet
       bullet.destroy();
@@ -743,8 +758,17 @@ class GameScene extends Phaser.Scene {
     }
   }
   
-  createIncomingCall(x, y) {
-    const incomingCall = new IncomingCall(this, x, y);
+  handlePlayerIncomingCallCollision(player, callSprite) {
+    // Get the incoming call instance from the sprite
+    const call = callSprite.incomingCallInstance;
+    if (call) {
+      // Use the call's handler which checks isEvil and behaves accordingly
+      call.handlePlayerCollision();
+    }
+  }
+  
+  createIncomingCall(x, y, characterType = null) {
+    const incomingCall = new IncomingCall(this, x, y, characterType);
     this.incomingCalls.push(incomingCall);
     
     // Add the call sprite to the incomingCallGroup for collision detection

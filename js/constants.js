@@ -65,7 +65,9 @@ export const INVULNERABLE_COLOR = 0x808080; // Gray color for invulnerable block
 // Incoming Call constants
 export const INCOMING_CALL_FALL_SPEED = 100; // Speed at which incoming calls fall
 export const INCOMING_CALL_SIZE = 15; // Size of the incoming call bomb shape
-export const INCOMING_CALL_COLOR = 0x1E90FF; // Dodger Blue color for incoming calls
+export const INCOMING_CALL_COLOR = 0x1E90FF; // Default color for incoming calls (used as fallback)
+export const INCOMING_CALL_EVIL_COLOR = 0xFF4500; // Evil character calls (OrangeRed)
+export const INCOMING_CALL_GOOD_COLOR = 0x32CD32; // Good character calls (LimeGreen)
 export const INCOMING_CALL_EXPLOSION_RADIUS = 75; // Explosion radius when call hits bottom (increased from 60)
 export const INCOMING_CALL_EXPLOSION_DURATION = 800; // Duration of explosion animation in milliseconds
 export const INCOMING_CALL_EXPLOSION_PARTICLES = 30; // Number of particles in explosion
@@ -86,3 +88,9 @@ export const UFO_APPEARANCES_PER_SPRINT = 3;
 export const UFO_DROP_CHANCE = 0.015; // Increased chance to drop incoming calls
 export const UFO_SPAWN_DELAY = 5000; // Milliseconds between UFO spawns
 export const UFO_SCREEN_TIME = 12000; // Milliseconds the UFO stays inside the screen before leaving 
+
+// Character proportions for incoming calls
+export const CHARACTER_PROPORTIONS = {
+  EVIL: 0.99, // 99% chance for evil character call
+  GOOD: 0.01  // 1% chance for good character call
+}; 

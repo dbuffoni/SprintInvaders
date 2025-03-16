@@ -1,19 +1,44 @@
-class BusinessAnalyst {
-  constructor() {
-    this.name = "BUSINESS ANALYST";
-    this.messages = [
-      "We need to add just one more tiny feature!",
-      "I need to validate this with the stakeholders. Can you hold on a second?",
-      "Let's schedule a meeting to discuss this further."
-    ];
-    this.effects = [
-      'addXXLBlock',
-      'lockWeapon',
-      'meeting'
-    ];
+// Base Character class
+import { CHARACTER_PROPORTIONS } from './constants.js';
+
+export class Character {
+  constructor({name, messages, effects, isEvil}) {
+    this.name = name;
+    this.messages = messages;
+    this.effects = effects;
+    this.isEvil = isEvil; // Whether the character is evil or good
     
-    // Meeting mode questions and options
-    this.meetingQuestions = [
+    // Default meeting mode questions and options
+    this.meetingQuestions = [];
+  }
+}
+
+// Cache for character instances to avoid repeated creation
+const characterCache = {
+  businessAnalyst: null,
+  stageur: null
+};
+
+// Create a BusinessAnalyst character directly without importing
+function createBusinessAnalyst() {
+  if (!characterCache.businessAnalyst) {
+    characterCache.businessAnalyst = new Character({
+      name: "BUSINESS ANALYST",
+      messages: [
+        "We need to add just one more tiny feature!",
+        "I need to validate this with the stakeholders. Can you hold on a second?",
+        "Let's schedule a meeting to discuss this further."
+      ],
+      effects: [
+        'addXXLBlock',
+        'lockWeapon',
+        'meeting'
+      ],
+      isEvil: true // Business Analyst is evil
+    });
+
+    // Add meeting questions
+    characterCache.businessAnalyst.meetingQuestions = [
       {
         question: "How long will it take to add a blockchain feature to the login page?",
         options: [
@@ -106,15 +131,100 @@ class BusinessAnalyst {
       }
     ];
   }
+  
+  return characterCache.businessAnalyst;
+}
+
+// Create a Stageur character directly without importing
+function createStageur() {
+  if (!characterCache.stageur) {
+    characterCache.stageur = new Character({
+      name: "STAGEUR",
+      messages: [
+        "I made you a coffee! ☕",
+        "I've been learning about design patterns. Need any help?",
+        "I think I found a bug in the code. Want me to explain it?"
+      ],
+      effects: [
+        'addCoffee',
+        'cleanCode',
+        'fixBugs'
+      ],
+      isEvil: false // Stageur is good
+    });
+    
+    // Meeting mode questions
+    characterCache.stageur.meetingQuestions = [
+      {
+        question: "I found this tutorial on efficient code algorithms. Can I present it to the team?",
+        options: [
+          { 
+            text: "Sure, that sounds helpful!", 
+            correct: true, 
+            message: "Great! I'll prepare a short demo. (Removes 2 blocks from the field)" 
+          },
+          { 
+            text: "No time for that now, maybe later.", 
+            correct: false, 
+            message: "I understand, we're busy. I'll just share the link in chat. (Nothing happens)" 
+          }
+        ]
+      },
+      {
+        question: "Would you prefer if I refactor this module or work on the new feature?",
+        options: [
+          { 
+            text: "Refactor first, it'll help with the new feature.", 
+            correct: true, 
+            message: "Exactly what I was thinking! (Removes 2 blocks from the field)" 
+          },
+          { 
+            text: "New feature first, refactor later.", 
+            correct: false, 
+            message: "Sure thing, features are the priority. (Nothing happens)" 
+          }
+        ]
+      },
+      {
+        question: "I noticed our test coverage is low. Should I write more tests?",
+        options: [
+          { 
+            text: "Yes, good tests save time in the long run.", 
+            correct: true, 
+            message: "I agree! I'll set up some test automation too. (Removes 2 blocks from the field)" 
+          },
+          { 
+            text: "We can worry about tests after the deadline.", 
+            correct: false, 
+            message: "I understand. I'll focus on features for now. (Nothing happens)" 
+          }
+        ]
+      }
+    ];
+  }
+  
+  return characterCache.stageur;
 }
 
 // Factory function to get characters
 export function getCharacter(type) {
   switch(type) {
     case 'businessAnalyst':
-      return new BusinessAnalyst();
-    // Add more characters here in the future
+      return createBusinessAnalyst();
+    case 'stageur':
+      return createStageur();
     default:
-      return new BusinessAnalyst();
+      // Randomly choose a character based on good/evil proportions
+      const rand = Math.random();
+      if (rand < CHARACTER_PROPORTIONS.EVIL) {
+        return createBusinessAnalyst(); // Evil character
+      } else {
+        return createStageur(); // Good character
+      }
   }
+}
+
+// Function to get all available character types
+export function getAllCharacterTypes() {
+  return ['businessAnalyst', 'stageur'];
 } 

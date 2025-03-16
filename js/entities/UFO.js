@@ -316,7 +316,8 @@ class UFO {
   dropIncomingCall() {
     if (!this.scene || !this.sprite || !this.sprite.active) return;
     
-    // Create incoming call at UFO position
+    // Create incoming call at UFO position with a random character type
+    // Character selection will be handled by IncomingCall constructor
     this.scene.createIncomingCall(this.sprite.x, this.sprite.y + UFO_HEIGHT/2);
   }
   

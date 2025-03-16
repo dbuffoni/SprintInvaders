@@ -215,6 +215,11 @@ class ScopeBlock {
            this.dependencies.some(dep => dep.sprite && dep.sprite.active);
   }
   
+  // Alias for isInvulnerable() for more readable code
+  hasActiveDependencies() {
+    return this.isInvulnerable();
+  }
+  
   // Update the visual appearance based on invulnerability status
   updateInvulnerableStatus() {
     const isInvulnerable = this.isInvulnerable();
