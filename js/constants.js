@@ -65,3 +65,17 @@ export const INCOMING_CALL_EXPLOSION_PARTICLES = 30; // Number of particles in e
 export const INCOMING_CALL_INITIAL_RATE = 1000; // Initial rate of incoming calls in milliseconds (5 seconds)
 export const INCOMING_CALL_RATE_DECREASE = 500; // Decrease in rate per sprint (milliseconds)
 export const INCOMING_CALL_CHANCE = 0.005; // Probability of an exposed block generating a call (each frame) 
+
+// UFO constants
+export const UFO_WIDTH = 80;
+export const UFO_HEIGHT = 40;
+export const UFO_COLOR = 0xADD8E6; // Light blue color
+export const UFO_MIN_SPEED = 60; // Slightly faster minimum speed
+export const UFO_MAX_SPEED = 220; // Slightly faster maximum speed
+export const UFO_ACCELERATION = 40; // Increased acceleration for more dynamic changes
+export const UFO_MAX_DIRECTION_CHANGES = 5; // Increased number of direction changes
+export const UFO_HEALTH = 10;
+export const UFO_APPEARANCES_PER_SPRINT = 3;
+export const UFO_DROP_CHANCE = 0.015; // Increased chance to drop incoming calls
+export const UFO_SPAWN_DELAY = 5000; // Milliseconds between UFO spawns
+export const UFO_SCREEN_TIME = 12000; // Milliseconds the UFO stays inside the screen before leaving 

@@ -4,6 +4,7 @@ import Bullet from '../entities/Bullet.js';
 import ScopeBlock from '../entities/ScopeBlock.js';
 import IncomingCallDialog from '../entities/IncomingCallDialog.js';
 import IncomingCall from '../entities/IncomingCall.js';
+import UFO from '../entities/UFO.js';
 
 // Import constants
 import { 
@@ -26,7 +27,9 @@ import {
   INCOMING_CALL_INITIAL_RATE,
   INCOMING_CALL_RATE_DECREASE,
   INCOMING_CALL_CHANCE,
-  BLOCK_WIDTH
+  BLOCK_WIDTH,
+  UFO_APPEARANCES_PER_SPRINT,
+  UFO_SPAWN_DELAY
 } from '../constants.js';
 
 class GameScene extends Phaser.Scene {
@@ -40,6 +43,7 @@ class GameScene extends Phaser.Scene {
     this.bullets = null;
     this.scopeBlocks = null;
     this.incomingCalls = []; // To store active incoming calls
+    this.ufos = []; // To store active UFOs
     this.coffeeCups = 3;
     this.score = 0;
     this.gameState = GAME_STATES.PLAYING;
@@ -51,10 +55,10 @@ class GameScene extends Phaser.Scene {
     this.playerCanShoot = true;
     this.keys = null;
     this.scopeBlockInstances = []; // Store references to ScopeBlock instances
-    this.incomingCallChance = INCOMING_CALL_CHANCE; // Probability of generating a call
-    this.incomingCallTimer = null; // Timer for generating incoming calls
-    this.currentIncomingCallRate = INCOMING_CALL_INITIAL_RATE; // Current rate for incoming calls
+    this.ufoCount = 0; // Count of UFOs spawned in current sprint
+    this.ufoTimer = null; // Timer for spawning UFOs
     this.xxlBlockCreated = false; // Flag to track if an XXL block has been created in the current sprint
+    this.ufosToSpawn = UFO_APPEARANCES_PER_SPRINT; // Track remaining UFOs to spawn
     
     // Check if we have an override message index from the StartScene
     if (data && data.overrideMessageIndex !== undefined) {
@@ -87,6 +91,9 @@ class GameScene extends Phaser.Scene {
     
     // Create incoming call group
     this.incomingCallGroup = IncomingCall.createIncomingCallGroup(this);
+    
+    // Create UFO group
+    this.ufoGroup = UFO.createUFOGroup(this);
 
     // Create player
     this.createPlayer();
@@ -109,8 +116,8 @@ class GameScene extends Phaser.Scene {
     // Setup input handlers
     this.setupInputHandlers();
     
-    // Set up incoming call timer
-    this.setupIncomingCallTimer();
+    // Set up UFO spawning
+    this.setupUFOSpawning();
     
     // Show initial sprint notification
     this.showSprintNotification();
@@ -138,16 +145,14 @@ class GameScene extends Phaser.Scene {
     // Update scope blocks
     this.updateScopeBlocks();
     
-    // Update incoming calls (but don't generate them every frame anymore)
+    // Update UFOs
+    this.updateUFOs();
+    
+    // Update incoming calls
     this.updateIncomingCalls();
     
     // Check if sprint is cleared
     this.checkSprintCleared();
-    
-    // Periodically check timer status (every ~3 seconds)
-    if (Math.random() < 0.02) {
-      this.checkTimerStatus();
-    }
   }
   
   createPlayer() {
@@ -263,6 +268,15 @@ class GameScene extends Phaser.Scene {
       this.bullets,
       this.incomingCallGroup,
       this.handleBulletIncomingCallCollision,
+      null,
+      this
+    );
+    
+    // Add collision between bullets and UFOs
+    this.physics.add.collider(
+      this.bullets,
+      this.ufoGroup,
+      this.handleBulletUFOCollision,
       null,
       this
     );
@@ -432,95 +446,140 @@ class GameScene extends Phaser.Scene {
     }
   }
   
-  setupIncomingCallTimer() {
+  setupUFOSpawning() {
+    // Reset UFO count for the new sprint
+    this.ufoCount = 0;
+    this.ufosToSpawn = UFO_APPEARANCES_PER_SPRINT; // Track remaining UFOs to spawn
+    
     // Clear any existing timer
-    if (this.incomingCallTimer) {
-      this.incomingCallTimer.remove();
-      console.log('Removed existing incoming call timer');
+    if (this.ufoTimer) {
+      this.ufoTimer.remove();
+      this.ufoTimer = null;
     }
     
-    // Set up a timer to generate incoming calls at a fixed rate
-    this.currentIncomingCallRate = INCOMING_CALL_INITIAL_RATE - ((this.sprintCount - 1) * INCOMING_CALL_RATE_DECREASE);
-    this.currentIncomingCallRate = Math.max(this.currentIncomingCallRate, 500); // Minimum rate of 500ms
+    // Calculate delay based on sprint number
+    this.ufoSpawnDelay = Math.max(UFO_SPAWN_DELAY - (this.sprintCount - 1) * 500, 2000);
     
-    this.incomingCallTimer = this.time.addEvent({
-      delay: this.currentIncomingCallRate,
-      callback: this.generateTimedIncomingCall,
-      callbackScope: this,
-      loop: true
-    });
+    // Schedule the first UFO spawn
+    this.scheduleNextUFO();
     
-    console.log(`Sprint ${this.sprintCount}: Incoming call rate set to ${this.currentIncomingCallRate}ms`);
+    console.log(`UFO spawning set up: ${UFO_APPEARANCES_PER_SPRINT} UFOs will appear this sprint with ${this.ufoSpawnDelay}ms delay between them`);
   }
   
-  generateTimedIncomingCall() {
-    // Skip generating new calls if the scrum board is active
-    if (this.scrumBoard && this.scrumBoard.active) {
-      console.log('Skipping incoming call generation while Incoming call dialog is active');
+  scheduleNextUFO() {
+    // Only schedule if there are more UFOs to spawn
+    if (this.ufosToSpawn <= 0) return;
+    
+    // Use the proper spawn delay between UFOs
+    this.ufoTimer = this.time.delayedCall(this.ufoSpawnDelay, () => {
+      this.checkAndSpawnUFO();
+    }, [], this);
+  }
+  
+  checkAndSpawnUFO() {
+    // Skip if game is not in playing state
+    if (this.gameState !== GAME_STATES.PLAYING) {
+      // If not playing, reschedule for later
+      this.scheduleNextUFO();
       return;
     }
     
-    // Find all exposed blocks
-    const exposedBlocks = this.findExposedBlocks();
+    // If we've spawned all UFOs for this sprint, stop checking
+    if (this.ufosToSpawn <= 0) {
+      return;
+    }
     
-    // If there are exposed blocks, randomly pick one to generate a call from
-    if (exposedBlocks.length > 0) {
-      const randomIndex = Math.floor(Math.random() * exposedBlocks.length);
-      const selectedBlock = exposedBlocks[randomIndex];
-      
-      // Log that we're generating a call since this means our timer is working
-      console.log('Generating incoming call - timer is working properly');
-      
-      this.createIncomingCall(
-        selectedBlock.x + selectedBlock.width / 2,
-        selectedBlock.y + selectedBlock.height
-      );
+    // Only spawn if there's no active UFO
+    if (this.ufos.length === 0) {
+      this.spawnUFO();
+    } else {
+      // If there's an active UFO, we'll check again later
+      this.scheduleNextUFO();
     }
   }
   
-  // Helper method to find all exposed blocks (blocks with no blocks below them)
-  findExposedBlocks() {
-    const exposedBlocks = [];
-    const allBlocks = this.scopeBlocks.getChildren().filter(block => block.active);
+  spawnUFO() {
+    // Skip spawning if game is not in playing state
+    if (this.gameState !== GAME_STATES.PLAYING) {
+      return;
+    }
     
-    // For each active block, check if it's exposed
-    allBlocks.forEach(block => {
-      // A block is considered exposed if there's no other block directly below it
-      const blockBottom = block.y + block.height;
-      const blockCenterX = block.x + (block.width / 2);
-      
-      // Check if any other block is directly below this one
-      const hasBlockBelow = allBlocks.some(otherBlock => {
-        if (block === otherBlock) return false;
-        
-        // Check if other block is below this block
-        if (otherBlock.y <= blockBottom) return false;
-        
-        // Check if other block is horizontally aligned with this block
-        const otherBlockLeft = otherBlock.x;
-        const otherBlockRight = otherBlock.x + otherBlock.width;
-        return blockCenterX >= otherBlockLeft && blockCenterX <= otherBlockRight;
-      });
-      
-      // If there's no block below, this block is exposed
-      if (!hasBlockBelow) {
-        exposedBlocks.push(block);
+    // Double-check that there's no active UFO
+    if (this.ufos.length > 0) {
+      console.log('UFO spawn prevented - another UFO is already active');
+      return;
+    }
+    
+    // Create new UFO
+    console.log('Spawning UFO...');
+    const startFromLeft = Math.random() > 0.5;
+    const ufo = new UFO(this, startFromLeft);
+    
+    // Add to tracking arrays
+    this.ufos.push(ufo);
+    this.ufoGroup.add(ufo.sprite);
+    
+    // Increment UFO count and decrement remaining UFOs to spawn
+    this.ufoCount++;
+    this.ufosToSpawn--;
+    
+    // Show UFO spawned notification
+    this.showUFONotification();
+  }
+  
+  showUFONotification() {
+    // Create a notification text
+    const notification = this.add.text(
+      CANVAS_WIDTH / 2,
+      PLAYABLE_HEIGHT / 4,
+      'UFO INCOMING!',
+      {
+        font: '24px Arial',
+        fontStyle: 'bold',
+        fill: '#FF0000',
+        stroke: '#000000',
+        strokeThickness: 2
+      }
+    );
+    notification.setOrigin(0.5);
+    
+    // Add a brief flash
+    this.tweens.add({
+      targets: notification,
+      alpha: 0,
+      duration: 1000,
+      onComplete: () => {
+        notification.destroy();
       }
     });
-    
-    return exposedBlocks;
   }
   
-  createIncomingCall(x, y) {
-    const incomingCall = new IncomingCall(this, x, y);
-    this.incomingCalls.push(incomingCall);
-    
-    // Add the call sprite to the incomingCallGroup for collision detection
-    if (this.incomingCallGroup) {
-      this.incomingCallGroup.add(incomingCall.sprite);
+  updateUFOs() {
+    // Update all active UFOs
+    for (let i = this.ufos.length - 1; i >= 0; i--) {
+      const ufo = this.ufos[i];
+      if (ufo.sprite && ufo.sprite.active) {
+        ufo.update();
+      } else {
+        // Remove inactive UFOs from the array
+        this.ufos.splice(i, 1);
+        
+        // Schedule the next UFO when the current one is destroyed
+        this.scheduleNextUFO();
+      }
     }
-    
-    return incomingCall;
+  }
+  
+  handleBulletUFOCollision(bullet, ufoSprite) {
+    // Get the UFO instance from the sprite
+    const ufo = ufoSprite.ufoInstance;
+    if (ufo) {
+      // Try to hit the UFO and check if it's destroyed
+      ufo.hit();
+      
+      // Destroy the bullet
+      bullet.destroy();
+    }
   }
   
   handleBulletBlockCollision(bullet, block) {
@@ -615,14 +674,15 @@ class GameScene extends Phaser.Scene {
     this.groupSpeed = Math.min(this.groupSpeed + 0.2, 3.0); // Cap at 3.0
     this.justDropped = false;
     
+    // Reset UFO count and set up spawning for new sprint
+    this.ufoCount = 0;
+    this.setupUFOSpawning();
+    
     // Show a notification for new sprint
     this.showSprintNotification();
     
     // Set game state back to playing
     this.gameState = GAME_STATES.PLAYING;
-    
-    // Update incoming call timer for the new sprint
-    this.setupIncomingCallTimer();
   }
   
   showSprintNotification() {
@@ -678,18 +738,18 @@ class GameScene extends Phaser.Scene {
     }
   }
   
-  // Add a diagnostic method to check if the timer is working
-  checkTimerStatus() {
-    if (this.incomingCallTimer) {
-      const status = this.incomingCallTimer.paused ? 'PAUSED' : 'RUNNING';
-      console.log(`Timer status check: Incoming call timer is ${status}`);
-    } else {
-      console.log('Timer status check: No incoming call timer exists!');
-      // Try to recreate it if it doesn't exist
-      this.setupIncomingCallTimer();
+  createIncomingCall(x, y) {
+    const incomingCall = new IncomingCall(this, x, y);
+    this.incomingCalls.push(incomingCall);
+    
+    // Add the call sprite to the incomingCallGroup for collision detection
+    if (this.incomingCallGroup) {
+      this.incomingCallGroup.add(incomingCall.sprite);
     }
+    
+    return incomingCall;
   }
-
+  
   createXXLBlock() {
     console.log('Creating XXL block in GameScene');
     
