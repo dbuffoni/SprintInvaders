@@ -91,6 +91,6 @@ export const UFO_SCREEN_TIME = 12000; // Milliseconds the UFO stays inside the s
 
 // Character proportions for incoming calls
 export const CHARACTER_PROPORTIONS = {
-  EVIL: 0.99, // 99% chance for evil character call
-  GOOD: 0.01  // 1% chance for good character call
+  EVIL: 0.5, // 50% chance for evil character call
+  GOOD: 0.5  // 50% chance for good character call
 }; 
