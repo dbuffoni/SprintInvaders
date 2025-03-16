@@ -29,7 +29,8 @@ import {
   INCOMING_CALL_CHANCE,
   BLOCK_WIDTH,
   UFO_APPEARANCES_PER_SPRINT,
-  UFO_SPAWN_DELAY
+  UFO_SPAWN_DELAY,
+  BLOCK_PROPORTIONS
 } from '../constants.js';
 
 class GameScene extends Phaser.Scene {
@@ -167,19 +168,23 @@ class GameScene extends Phaser.Scene {
     // Create blocks in the grid pattern
     for (let row = 0; row < ROWS; row++) {
       for (let col = 0; col < COLS; col++) {
-        // Determine block category based on row
+        // Calculate block position
+        const x = START_X + col * H_SPACING;
+        const y = START_Y + row * V_SPACING;
+        
+        // Randomly determine block category based on BLOCK_PROPORTIONS
+        // Generate a random number between 0 and 1
+        const random = Math.random();
+        
+        // Select category based on proportions
         let category;
-        if (row === 0) {
+        if (random < BLOCK_PROPORTIONS['S']) {
           category = 'S';
-        } else if (row === 1 || row === 2) {
+        } else if (random < BLOCK_PROPORTIONS['S'] + BLOCK_PROPORTIONS['M']) {
           category = 'M';
         } else {
           category = 'L';
         }
-        
-        // Calculate block position
-        const x = START_X + col * H_SPACING;
-        const y = START_Y + row * V_SPACING;
         
         // Create the scope block
         const scopeBlock = new ScopeBlock(this, x, y, category);

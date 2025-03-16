@@ -24,6 +24,13 @@ export const CATEGORIES = ['S', 'M', 'L'];
 // XXL is a special category only added by the Business Analyst
 // IC is a special category for Incoming Call, which triggers character actions
 
+// Block size proportions (probability of each type appearing)
+export const BLOCK_PROPORTIONS = {
+  'S': 0.3,  // 40% chance of Small blocks
+  'M': 0.4,  // 40% chance of Medium blocks
+  'L': 0.3   // 20% chance of Large blocks
+};
+
 // Game states
 export const GAME_STATES = {
   PLAYING: "playing",
@@ -33,12 +40,12 @@ export const GAME_STATES = {
   PAUSED: "paused"
 }; 
 
-// Phaser colors for blocks (hex format)
+// Phaser colors for blocks (hex format) - Darker colors for better text readability
 export const BLOCK_COLORS = {
-  'S': 0x00FF00, // Green
-  'M': 0xFFFF00, // Yellow
-  'L': 0xFF0000, // Red
-  'XXL': 0x800080, // Purple
+  'S': 0x008800, // Darker Green
+  'M': 0xCCCC00, // Darker Yellow
+  'L': 0xCC0000, // Darker Red
+  'XXL': 0x660066, // Darker Purple
 };
 
 // Phaser scene keys
@@ -51,7 +58,7 @@ export const SCENES = {
 
 // Block dependency constants
 export const MAX_DEPENDENCIES = 2; // Maximum number of dependencies a block can have
-export const DEPENDENCY_CHANCE = 0.4; // Chance that a block will have a dependency when created
+export const DEPENDENCY_CHANCE = 0.5; // Chance that a block will have a dependency when created
 export const INVULNERABLE_ALPHA = 0.7; // Alpha value for invulnerable blocks
 export const INVULNERABLE_COLOR = 0x808080; // Gray color for invulnerable blocks
 
