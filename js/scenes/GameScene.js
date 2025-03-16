@@ -207,6 +207,9 @@ class GameScene extends Phaser.Scene {
   createScrumBoard() {
     // Initialize the IncomingCallDialog with the current scene
     this.scrumBoard = new IncomingCallDialog(this);
+    
+    // Ensure header is set to default state at game start
+    this.scrumBoard.showHeaderOnly();
   }
   
   createUI() {
@@ -498,6 +501,13 @@ class GameScene extends Phaser.Scene {
       return;
     }
     
+    // Skip if the IncomingCallDialog is active
+    if (this.scrumBoard && this.scrumBoard.active) {
+      console.log('UFO spawn check skipped - IncomingCallDialog is active');
+      this.scheduleNextUFO(); // Reschedule for later
+      return;
+    }
+    
     // If we've spawned all UFOs for this sprint, stop checking
     if (this.ufosToSpawn <= 0) {
       return;
@@ -515,6 +525,13 @@ class GameScene extends Phaser.Scene {
   spawnUFO() {
     // Skip spawning if game is not in playing state
     if (this.gameState !== GAME_STATES.PLAYING) {
+      return;
+    }
+    
+    // Check if the IncomingCallDialog is active and skip spawning if it is
+    if (this.scrumBoard && this.scrumBoard.active) {
+      console.log('UFO spawn prevented - IncomingCallDialog is active');
+      this.scheduleNextUFO(); // Reschedule for later
       return;
     }
     
@@ -539,6 +556,11 @@ class GameScene extends Phaser.Scene {
     
     // Show UFO spawned notification
     this.showUFONotification();
+    
+    // Change header text to UFO warning
+    if (this.scrumBoard) {
+      this.scrumBoard.setUFOHeader();
+    }
   }
   
   showUFONotification() {
@@ -569,6 +591,9 @@ class GameScene extends Phaser.Scene {
   }
   
   updateUFOs() {
+    // Track if we had UFOs before update
+    const hadUFOs = this.ufos.length > 0;
+    
     // Update all active UFOs
     for (let i = this.ufos.length - 1; i >= 0; i--) {
       const ufo = this.ufos[i];
@@ -581,6 +606,11 @@ class GameScene extends Phaser.Scene {
         // Schedule the next UFO when the current one is destroyed
         this.scheduleNextUFO();
       }
+    }
+    
+    // If we had UFOs before but none now, reset header
+    if (hadUFOs && this.ufos.length === 0 && this.scrumBoard && !this.scrumBoard.active) {
+      this.scrumBoard.resetHeader();
     }
   }
   
@@ -679,6 +709,9 @@ class GameScene extends Phaser.Scene {
     
     // Use the new method to properly reset the scrum board
     this.scrumBoard.resetForNewSprint();
+    
+    // Reset header to default state after a new sprint
+    this.scrumBoard.resetHeader();
     
     // Create new scope blocks based on the current sprint
     this.createScopeBlocks();

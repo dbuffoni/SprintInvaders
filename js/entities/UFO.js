@@ -193,6 +193,30 @@ class UFO {
   
   update() {
     if (this.sprite && this.sprite.active) {
+      // Check if IncomingCallDialog is active - if so, force UFO to leave
+      if (this.scene.scrumBoard && this.scene.scrumBoard.active) {
+        console.log('IncomingCallDialog active - forcing UFO to leave screen');
+        this.canLeaveScreen = true;
+        
+        // Determine closest exit direction
+        const distanceToLeft = this.sprite.x;
+        const distanceToRight = CANVAS_WIDTH - this.sprite.x;
+        
+        if (distanceToLeft < distanceToRight) {
+          // Closer to left edge, head left
+          this.horizontalDirection = -1;
+        } else {
+          // Closer to right edge, head right
+          this.horizontalDirection = 1;
+        }
+        // Apply the new direction with a higher speed to ensure it leaves quickly
+        this.speed = UFO_MAX_SPEED * 2;
+        this.sprite.body.setVelocityX(this.speed * this.horizontalDirection);
+        
+        // Also disable dropping calls
+        return;
+      }
+      
       // Check if UFO can leave the screen
       if (this.canLeaveScreen) {
         // Allow the UFO to leave the screen when time expires
@@ -315,6 +339,12 @@ class UFO {
   
   dropIncomingCall() {
     if (!this.scene || !this.sprite || !this.sprite.active) return;
+    
+    // Check if the IncomingCallDialog is active and skip dropping calls if it is
+    if (this.scene.scrumBoard && this.scene.scrumBoard.active) {
+      console.log('Skipping incoming call drop - IncomingCallDialog is active');
+      return;
+    }
     
     // Create incoming call at UFO position with a random character type
     // Character selection will be handled by IncomingCall constructor

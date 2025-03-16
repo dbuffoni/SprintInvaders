@@ -27,6 +27,13 @@ class IncomingCallDialog {
     this.blinkDuration = 120; // 3 seconds at 60fps
     this.blinkInterval = 10; // Blink every quarter second at 60fps
     
+    // Header text states
+    this.headerTexts = {
+      DEFAULT: "Sprint in progress",
+      UFO: "Someone is trying to reach you out...",
+      CALL: "Incoming call"
+    };
+    
     // Meeting mode properties
     this.meetingQuestions = []; // Will store random selected questions
     this.currentQuestionIndex = 0;
@@ -81,11 +88,11 @@ class IncomingCallDialog {
     );
     this.titleBox.setOrigin(0, 0);
     
-    // Create title text centered in the title box
+    // Create title text centered in the title box with the default text
     this.titleText = this.scene.add.text(
       CANVAS_WIDTH / 2,
       HEADER_HEIGHT / 2,
-      "INCOMING CALL",
+      this.headerTexts.DEFAULT,
       {
         font: '18px Arial',
         fill: '#ffffff',
@@ -206,6 +213,13 @@ class IncomingCallDialog {
     this.titleText.setVisible(true);
     this.fullBackground.setVisible(false);
     
+    // Set the header text back to default if not active
+    if (!this.active) {
+      this.titleText.setText(this.headerTexts.DEFAULT);
+      // Always reset color to default when showing default text
+      this.titleBox.fillColor = 0x4b6584;
+    }
+    
     // Hide content elements
     this.characterText.setVisible(false);
     this.messageText.setVisible(false);
@@ -261,6 +275,25 @@ class IncomingCallDialog {
     }
   }
   
+  // Set the header to UFO mode
+  setUFOHeader() {
+    if (!this.active) {
+      this.titleText.setText(this.headerTexts.UFO);
+      // Set an attention color for the UFO warning before starting to blink
+      this.startBlinking();
+    }
+  }
+  
+  // Reset the header to default mode
+  resetHeader() {
+    if (!this.active) {
+      this.stopBlinking();
+      this.titleText.setText(this.headerTexts.DEFAULT);
+      // Explicitly reset the color to default when resetting the header
+      this.titleBox.fillColor = 0x4b6584;
+    }
+  }
+  
   activate(character) {
     // Check if the board is visually active (not just the flag)
     const isVisuallyActive = this.mainContainer && this.mainContainer.visible && 
@@ -283,6 +316,9 @@ class IncomingCallDialog {
     console.log(`Activating IncomingCallDialog with character: ${character.name}`);
     this.active = true;
     this.character = character;
+    
+    // Set the title text to CALL
+    this.titleText.setText(this.headerTexts.CALL);
     
     // Change the title box color based on whether the character is good or evil
     const titleBoxColor = character.isEvil ? 0xC70039 : 0x2E8B57; // Crimson for evil, SeaGreen for good
@@ -392,6 +428,11 @@ class IncomingCallDialog {
     // Stop any blinking
     this.stopBlinking();
     
+    // Reset title text to default
+    this.titleText.setText(this.headerTexts.DEFAULT);
+    // Explicitly set the default color
+    this.titleBox.fillColor = 0x4b6584;
+    
     // Restore the previous game state if it exists, otherwise set it to PLAYING
     if (this.previousGameState) {
       this.scene.gameState = this.previousGameState;
@@ -457,7 +498,7 @@ class IncomingCallDialog {
         if (this.titleBox.fillColor === 0x4b6584) {
           this.titleBox.fillColor = 0xe74c3c; // Attention color (red)
         } else {
-          this.titleBox.fillColor = 0x4b6584; // Normal color
+          this.titleBox.fillColor = 0x4b6584; // Default color
         }
       }
     }
@@ -504,6 +545,11 @@ class IncomingCallDialog {
     
     // Stop any blinking
     this.stopBlinking();
+    
+    // Reset title text to default
+    this.titleText.setText(this.headerTexts.DEFAULT);
+    // Explicitly set the default color
+    this.titleBox.fillColor = 0x4b6584;
     
     // Restore the previous game state if it exists, otherwise set it to PLAYING
     if (this.previousGameState) {
@@ -883,6 +929,12 @@ class IncomingCallDialog {
     console.log('IncomingCallDialog reset for new sprint, incoming calls should be generated normally');
     // Reset any sprint-specific state
     this.forceDeactivate();
+    
+    // Ensure header text is reset to default
+    this.titleText.setText(this.headerTexts.DEFAULT);
+    this.stopBlinking();
+    // Ensure color is reset to default
+    this.titleBox.fillColor = 0x4b6584;
   }
   
   // Other methods like update(), deactivate(), etc. with the same logic but renamed references
