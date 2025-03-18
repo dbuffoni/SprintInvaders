@@ -866,106 +866,40 @@ class GameScene extends Phaser.Scene {
     const xxlBlock = new ScopeBlock(this, finalX, blockY, 'XXL');
     this.scopeBlockInstances.push(xxlBlock);
     
-    // Add a visual notification
-    const notification = this.add.text(
-      CANVAS_WIDTH / 2,
-      PLAYABLE_HEIGHT / 3,
-      '⚠️ ONE MORE FEATURE ADDED! ⚠️',
-      {
-        font: '24px Arial',
-        fill: '#FF0000',
-        stroke: '#000000',
-        strokeThickness: 3,
-        backgroundColor: '#00000080',
-        padding: { x: 10, y: 5 }
-      }
-    );
-    notification.setOrigin(0.5, 0.5);
-    notification.setDepth(1000);
-    
-    // Fade out and destroy the notification after a short duration
-    this.tweens.add({
-      targets: notification,
-      alpha: 0,
-      y: PLAYABLE_HEIGHT / 3 - 50,
-      duration: 2000,
-      onComplete: () => notification.destroy()
-    });
+    // Show notification in header
+    if (this.scrumBoard) {
+      this.scrumBoard.setCustomBlinkingHeader('⚠️ FEATURE ADDED! ⚠️', 3000, 0xFF0000);
+    }
     
     return xxlBlock;
   }
   
-  // Method to create multiple M blocks for meeting rewards
-  createMBlocks(count) {
-    console.log(`Creating ${count} M blocks in GameScene`);
+  // Method to create multiple XXL blocks
+  createXXLBlocks(count) {
+    console.log(`Creating ${count} XXL blocks in GameScene`);
     
-    const existingBlocks = this.scopeBlockInstances;
     const blocksCreated = [];
     
-    // Find the lowest block (with highest Y value) that is still active
-    let lowestY = START_Y;
-    let lowestBlock = null;
-    
-    for (const block of existingBlocks) {
-      if (block.sprite && block.sprite.active && block.sprite.y > lowestY) {
-        lowestY = block.sprite.y;
-        lowestBlock = block;
-      }
-    }
-    
-    // Calculate position below the lowest block
-    // If no blocks exist, use a default position near the bottom of the playable area
-    const blockY = lowestBlock ? lowestY + V_SPACING : PLAYABLE_HEIGHT - 150;
-    
-    // Create the blocks slightly spaced horizontally
+    // Create the requested number of XXL blocks by calling createXXLBlock multiple times
     for (let i = 0; i < count; i++) {
-      // Calculate x position with slight spacing between blocks
-      const middleX = CANVAS_WIDTH / 2 - BLOCK_WIDTH / 2;
-      const offsetX = (i - Math.floor(count/2)) * (BLOCK_WIDTH + 10); // Space blocks 10px apart
-      const finalX = Math.max(20, Math.min(CANVAS_WIDTH - BLOCK_WIDTH - 20, middleX + offsetX));
-      
-      // Create the M block
-      const mBlock = new ScopeBlock(this, finalX, blockY, 'M');
-      this.scopeBlockInstances.push(mBlock);
-      blocksCreated.push(mBlock);
+      const xxlBlock = this.createXXLBlock();
+      blocksCreated.push(xxlBlock);
     }
     
-    // Add a visual notification
-    const message = count > 1 ? `${count} M BLOCKS ADDED!` : `M BLOCK ADDED!`;
-    const notification = this.add.text(
-      CANVAS_WIDTH / 2,
-      PLAYABLE_HEIGHT / 3,
-      `💻 ${message} 💻`,
-      {
-        font: '24px Arial',
-        fill: '#FFFF00',
-        stroke: '#000000',
-        strokeThickness: 3,
-        backgroundColor: '#00000080',
-        padding: { x: 10, y: 5 }
-      }
-    );
-    notification.setOrigin(0.5, 0.5);
-    notification.setDepth(1000);
-    
-    // Fade out and destroy the notification after a short duration
-    this.tweens.add({
-      targets: notification,
-      alpha: 0,
-      y: PLAYABLE_HEIGHT / 3 - 50,
-      duration: 2000,
-      onComplete: () => notification.destroy()
-    });
+    // Show notification in header if more than one block was created
+    // (individual notifications are already shown by createXXLBlock, this adds a summary)
+    if (count > 1 && this.scrumBoard) {
+      this.scrumBoard.setCustomBlinkingHeader(`⚠️ ${count} FEATURES ADDED! ⚠️`, 3000, 0xFF0000);
+    }
     
     return blocksCreated;
   }
   
-  // Method to create multiple XXL blocks for meeting rewards
-  createXXLBlocks(count) {
-    console.log(`Creating ${count} XXL blocks in GameScene`);
+  // Method to create M blocks (similar to XXL blocks but with category 'M')
+  createMBlock() {
+    console.log('Creating M block in GameScene');
     
     const existingBlocks = this.scopeBlockInstances;
-    const blocksCreated = [];
     
     // Find the lowest block (with highest Y value) that is still active
     let lowestY = START_Y;
@@ -982,45 +916,40 @@ class GameScene extends Phaser.Scene {
     // If no blocks exist, use a default position near the bottom of the playable area
     const blockY = lowestBlock ? lowestY + V_SPACING : PLAYABLE_HEIGHT - 150;
     
-    // Create the blocks slightly spaced horizontally
-    for (let i = 0; i < count; i++) {
-      // Calculate x position with slight spacing between blocks
-      const middleX = CANVAS_WIDTH / 2 - BLOCK_WIDTH / 2;
-      const offsetX = (i - Math.floor(count/2)) * (BLOCK_WIDTH + 10); // Space blocks 10px apart
-      const finalX = Math.max(20, Math.min(CANVAS_WIDTH - BLOCK_WIDTH - 20, middleX + offsetX));
-      
-      // Create the XXL block
-      const xxlBlock = new ScopeBlock(this, finalX, blockY, 'XXL');
-      this.scopeBlockInstances.push(xxlBlock);
-      blocksCreated.push(xxlBlock);
+    // Add slight horizontal randomness
+    const middleX = CANVAS_WIDTH / 2 - BLOCK_WIDTH / 2;
+    const randomOffsetX = Math.floor(Math.random() * 80) - 40; // Random offset between -40 and +40 pixels
+    const finalX = Math.max(20, Math.min(CANVAS_WIDTH - BLOCK_WIDTH - 20, middleX + randomOffsetX));
+    
+    // Create the M block
+    const mBlock = new ScopeBlock(this, finalX, blockY, 'M');
+    this.scopeBlockInstances.push(mBlock);
+    
+    // Show notification in header
+    if (this.scrumBoard) {
+      this.scrumBoard.setCustomBlinkingHeader('💻 TASK ADDED! 💻', 3000, 0xFFFF00);
     }
     
-    // Add a visual notification
-    const message = count > 1 ? `${count} XXL BLOCKS ADDED!` : `XXL BLOCK ADDED!`;
-    const notification = this.add.text(
-      CANVAS_WIDTH / 2,
-      PLAYABLE_HEIGHT / 3,
-      `⚠️ ${message} ⚠️`,
-      {
-        font: '24px Arial',
-        fill: '#FF0000',
-        stroke: '#000000',
-        strokeThickness: 3,
-        backgroundColor: '#00000080',
-        padding: { x: 10, y: 5 }
-      }
-    );
-    notification.setOrigin(0.5, 0.5);
-    notification.setDepth(1000);
+    return mBlock;
+  }
+  
+  // Method to create multiple M blocks
+  createMBlocks(count) {
+    console.log(`Creating ${count} M blocks in GameScene`);
     
-    // Fade out and destroy the notification after a short duration
-    this.tweens.add({
-      targets: notification,
-      alpha: 0,
-      y: PLAYABLE_HEIGHT / 3 - 50,
-      duration: 2000,
-      onComplete: () => notification.destroy()
-    });
+    const blocksCreated = [];
+    
+    // Create the requested number of M blocks by calling createMBlock multiple times
+    for (let i = 0; i < count; i++) {
+      const mBlock = this.createMBlock();
+      blocksCreated.push(mBlock);
+    }
+    
+    // Show notification in header if more than one block was created
+    // (individual notifications are already shown by createMBlock, this adds a summary)
+    if (count > 1 && this.scrumBoard) {
+      this.scrumBoard.setCustomBlinkingHeader(`💻 ${count} TASKS ADDED! 💻`, 3000, 0xFFFF00);
+    }
     
     return blocksCreated;
   }

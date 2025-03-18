@@ -939,6 +939,47 @@ class IncomingCallDialog {
   
   // Other methods like update(), deactivate(), etc. with the same logic but renamed references
   
+  // Set a custom blinking header with specified message and duration
+  setCustomBlinkingHeader(message, duration = 3000, color = 0xFF0000) {
+    if (!this.active) {
+      this.titleText.setText(message);
+      // Set custom blinking parameters
+      this.blinkDuration = duration / 16; // Convert to frames (assuming 60fps with 16ms per frame)
+      this.blinkInterval = 10; // Blink every 10 frames
+      this.customBlinkColor = color;
+      this.startBlinking();
+      
+      // Set a timer to reset the header after duration
+      this.scene.time.delayedCall(duration, () => {
+        this.resetHeader();
+      });
+    }
+  }
+  
+  // Update the blinking animation for the title
+  updateBlinking() {
+    if (this.isBlinking) {
+      this.blinkTimer++;
+      
+      if (this.blinkTimer >= this.blinkDuration) {
+        // Stop blinking after duration
+        this.stopBlinking();
+        return;
+      }
+      
+      // Blink every blinkInterval frames
+      if (this.blinkTimer % this.blinkInterval === 0) {
+        // Toggle between normal color and attention color
+        if (this.titleBox.fillColor === 0x4b6584) {
+          // Use custom color if defined, otherwise use default attention color
+          this.titleBox.fillColor = this.customBlinkColor || 0xe74c3c; // Attention color
+        } else {
+          this.titleBox.fillColor = 0x4b6584; // Default color
+        }
+      }
+    }
+  }
+  
   // The last line should be:
   // export default IncomingCallDialog;
 }
