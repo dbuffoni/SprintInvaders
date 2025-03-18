@@ -790,22 +790,6 @@ class GameScene extends Phaser.Scene {
     const existingBlocks = this.scopeBlockInstances;
     let blockY, finalX;
     
-    // Configuration based on category
-    const blockConfig = {
-      'XXL': {
-        headerText: '⚠️ FEATURE ADDED! ⚠️',
-        headerColor: 0xFF0000,
-        plural: 'FEATURES'
-      },
-      'M': {
-        headerText: '💻 TASK ADDED! 💻',
-        headerColor: 0xFFFF00,
-        plural: 'TASKS'
-      }
-    };
-    
-    const config = blockConfig[category] || blockConfig['XXL']; // Default to XXL if category not found
-    
     // Find existing blocks of the same category
     const sameTypeBlocks = existingBlocks.filter(block => 
       block.category === category && block.sprite && block.sprite.active
@@ -849,11 +833,6 @@ class GameScene extends Phaser.Scene {
     const block = new ScopeBlock(this, finalX, blockY, category);
     this.scopeBlockInstances.push(block);
     
-    // Show notification in header
-    if (this.scrumBoard) {
-      this.scrumBoard.setCustomBlinkingHeader(config.headerText, 3000, config.headerColor);
-    }
-    
     return block;
   }
   
@@ -894,42 +873,25 @@ class GameScene extends Phaser.Scene {
       blocksCreated.push(block);
     }
     
-    // Show notification in header if more than one block was created
-    if (count > 1 && this.scrumBoard) {
-      // Get the correct configuration for this category
-      const blockConfig = {
-        'XXL': {
-          headerText: `⚠️ ${count} FEATURES ADDED! ⚠️`,
-          headerColor: 0xFF0000
-        },
-        'M': {
-          headerText: `💻 ${count} TASKS ADDED! 💻`,
-          headerColor: 0xFFFF00
-        }
-      };
-      
-      const config = blockConfig[category] || blockConfig['XXL']; // Default to XXL if category not found
-      this.scrumBoard.setCustomBlinkingHeader(config.headerText, 3000, config.headerColor);
+    // Single configuration for notification
+    const singleHeaderText = "⚠️ NEW FEATURE ADDED! ⚠️";
+    const headerText = `⚠️ ${count} FEATURES ADDED! ⚠️`;
+    const headerColor = 0xFF0000;
+    
+    // Show notification in header based on number of blocks created
+    if (this.scrumBoard) {
+      if (count === 1) {
+        // Single block notification
+        this.scrumBoard.setCustomBlinkingHeader(singleHeaderText, 3000, headerColor);
+        console.log("⚠️ NEW FEATURE ADDED! ⚠️");
+      } else if (count > 1) {
+        // Multiple blocks notification
+        this.scrumBoard.setCustomBlinkingHeader(headerText, 3000, headerColor);
+        console.log(`⚠️ ${count} FEATURES ADDED! ⚠️`);
+      }
     }
     
     return blocksCreated;
-  }
-  
-  // Wrapper methods to maintain backward compatibility
-  createXXLBlock() {
-    return this.createBlock('XXL');
-  }
-  
-  createXXLBlocks(count) {
-    return this.createBlocks('XXL', count);
-  }
-  
-  createMBlock() {
-    return this.createBlock('M');
-  }
-  
-  createMBlocks(count) {
-    return this.createBlocks('M', count);
   }
 } 
 

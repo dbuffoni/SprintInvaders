@@ -609,9 +609,9 @@ class IncomingCallDialog {
         // Create the XXL block immediately to avoid timing issues
         console.log('Creating XXL block after dialog closed');
         // Add a short-term flag to prevent double calls during the same dialog interaction
-        if (this.scene && this.scene.createXXLBlock && !this._blockBeingCreated) {
+        if (this.scene && this.scene.createBlock && !this._blockBeingCreated) {
           this._blockBeingCreated = true;
-          this.scene.createXXLBlock();
+          this.scene.createBlocks('XXL',1);
           
           // Clear the flag after a short delay
           this.scene.time.delayedCall(500, () => {
@@ -856,17 +856,17 @@ class IncomingCallDialog {
       if (this.selectedMeetingOption.correct) {
         // Correct answer: 80% chance to add 3 M Scope Blocks
         if (Math.random() < 0.8) {
-          if (this.scene && this.scene.createMBlocks) {
+          if (this.scene && this.scene.createBlocks) {
             console.log('Applying reward: Creating 3 M blocks for correct answer');
-            this.scene.createMBlocks(3);
+            this.scene.createBlocks('M', 3);
           }
         }
       } else {
         // Incorrect answer: 20% chance to add 3 XXL Scope Blocks
         if (Math.random() < 0.2) {
-          if (this.scene && this.scene.createXXLBlocks) {
+          if (this.scene && this.scene.createBlocks) {
             console.log('Applying penalty: Creating 3 XXL blocks for incorrect answer');
-            this.scene.createXXLBlocks(3);
+            this.scene.createBlocks('XXL', 3);
           }
         }
       }
