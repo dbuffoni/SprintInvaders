@@ -1,5 +1,5 @@
 // Import constants
-import { BLOCK_COLORS, PLAYABLE_HEIGHT, INVULNERABLE_ALPHA, INVULNERABLE_COLOR, BLOCK_WIDTH, BLOCK_HEIGHT } from '../constants.js';
+import { BLOCK_COLORS, PLAYABLE_HEIGHT, INVULNERABLE_ALPHA, INVULNERABLE_COLOR, BLOCK_WIDTH, BLOCK_HEIGHT, SIMPLE_BUG_GENERATION_CHANCE, SIMPLE_BUG_CHANCE_INCREASE_PER_SPRINT } from '../constants.js';
 import { getCharacter } from '../characters.js';
 
 class ScopeBlock {
@@ -309,11 +309,13 @@ class ScopeBlock {
   
   // Set block to broken state
   setBrokenState() {
-    if (this.broken) return; // Already broken
+    // Skip if already broken
+    if (this.broken) return false;
     
+    // Set broken flag
     this.broken = true;
-    
-    // Create the two broken pieces
+
+    // Create broken piece textures if they don't exist already
     const isInvulnerable = this.isInvulnerable();
     const leftTextureKey = isInvulnerable ? 
       `invulnerable_${this.category}_left` : `block_${this.category}_left`;
@@ -323,6 +325,9 @@ class ScopeBlock {
     // Get the original sprite position
     const centerX = this.sprite.x + this.width / 2;
     const centerY = this.sprite.y + this.height / 2;
+    
+    // Hide the original sprite but don't destroy it
+    this.sprite.setVisible(false);
     
     // Create left piece slightly to the left and rotated
     this.leftPiece = this.scene.physics.add.sprite(
@@ -346,8 +351,9 @@ class ScopeBlock {
       this.rightPiece.setAlpha(INVULNERABLE_ALPHA);
     }
     
-    // Hide the original sprite (keep it for physics and logic)
-    this.sprite.setVisible(false);
+    // Add to group to ensure collisions still work
+    this.scene.scopeBlocks.add(this.leftPiece);
+    this.scene.scopeBlocks.add(this.rightPiece);
     
     // Apply rotation animation effect with REVERSED directions
     this.scene.tweens.add({
@@ -380,14 +386,17 @@ class ScopeBlock {
         this.rightPiece.setTint(originalTint);
       });
     });
+    
+    return true;
   }
   
   // Update pieces position to follow the main sprite
   updatePiecesPosition() {
     if (this.broken && this.leftPiece && this.rightPiece) {
-      const centerX = this.sprite.x + this.width / 2;
-      const centerY = this.sprite.y + this.height / 2;
+      const centerX = this.x + this.width / 2;
+      const centerY = this.y + this.height / 2;
       
+      // Update positions of the pieces
       this.leftPiece.x = centerX - this.width / 4;
       this.leftPiece.y = centerY;
       
@@ -641,6 +650,14 @@ class ScopeBlock {
       // Reset justDropped when blocks are no longer at the edge
       setJustDropped(false);
     }
+    
+    // Update each block
+    blocks.forEach(block => {
+      // Update individual block (for bug generation)
+      if (typeof block.update === 'function') {
+        block.update();
+      }
+    });
   }
   
   // Setup dependencies between blocks
@@ -745,6 +762,45 @@ class ScopeBlock {
         delete block.dependencyDirection;
       });
     });
+  }
+
+  update() {
+    // If broken, update pieces position and check for bug generation
+    if (this.broken) {
+      // Allow all broken blocks to generate bugs, even invulnerable ones
+      this.checkBugGeneration();
+    }
+  }
+
+  // New method to check and potentially generate a bug
+  checkBugGeneration() {
+    // Skip if the block isn't broken or if no scene is available
+    if (!this.broken || !this.scene) return;
+    
+    // Get base chance based on block category
+    let baseChance = SIMPLE_BUG_GENERATION_CHANCE[this.category] || SIMPLE_BUG_GENERATION_CHANCE['S'];
+    
+    // Increase chance based on current sprint
+    const sprintIncrease = (this.scene.sprintCount - 1) * SIMPLE_BUG_CHANCE_INCREASE_PER_SPRINT;
+    const finalChance = baseChance + sprintIncrease;
+    
+    // Random check to see if we should generate a bug
+    if (Math.random() < finalChance) {
+      this.generateBug();
+    }
+  }
+
+  // New method to generate a bug
+  generateBug() {
+    // Skip if the SimpleBug module isn't loaded or scene is not available
+    if (!this.scene || !this.scene.createSimpleBug) return;
+    
+    // Calculate position for bug to appear (just below the broken block)
+    const x = this.x + this.width / 2;
+    const y = this.y + this.height + 2; // Position just below the block
+    
+    // Create the bug through the GameScene
+    this.scene.createSimpleBug(x, y);
   }
 }
 

@@ -5,6 +5,7 @@ import ScopeBlock from '../entities/ScopeBlock.js';
 import IncomingCallDialog from '../entities/IncomingCallDialog.js';
 import IncomingCall from '../entities/IncomingCall.js';
 import UFO from '../entities/UFO.js';
+import SimpleBug from '../entities/SimpleBug.js';
 
 // Import constants
 import { 
@@ -45,6 +46,7 @@ class GameScene extends Phaser.Scene {
     this.scopeBlocks = null;
     this.incomingCalls = []; // To store active incoming calls
     this.ufos = []; // To store active UFOs
+    this.bugs = []; // To store active simple bugs
     this.coffeeCups = 3;
     this.score = 0;
     this.gameState = GAME_STATES.PAUSED; // Start paused until the notification completes
@@ -95,6 +97,9 @@ class GameScene extends Phaser.Scene {
     
     // Create UFO group
     this.ufoGroup = UFO.createUFOGroup(this);
+    
+    // Create simple bug group
+    this.bugGroup = SimpleBug.createBugGroup(this);
 
     // Create player
     this.createPlayer();
@@ -103,16 +108,13 @@ class GameScene extends Phaser.Scene {
     this.createScopeBlocks();
     
     // Set up collisions for the blocks
-    this.setupBlockCollisions();
+    this.setupCollisions();
 
     // Create scrum board
     this.createScrumBoard();
 
     // Create UI
     this.createUI();
-    
-    // Setup collisions
-    this.setupCollisions();
     
     // Setup input handlers
     this.setupInputHandlers();
@@ -151,6 +153,9 @@ class GameScene extends Phaser.Scene {
     
     // Update incoming calls
     this.updateIncomingCalls();
+    
+    // Update simple bugs
+    this.updateBugs();
     
     // Check if sprint is cleared
     this.checkSprintCleared();
@@ -297,6 +302,18 @@ class GameScene extends Phaser.Scene {
       null,
       this
     );
+    
+    // Add collision between player and simple bugs
+    this.physics.add.collider(
+      this.player.sprite,
+      this.bugGroup,
+      this.handlePlayerBugCollision,
+      null,
+      this
+    );
+    
+    // Note: We deliberately DO NOT add a collider between bullets and bugs,
+    // as per requirements, bullets should not collide with Simple Bugs
   }
   
   setupBlockCollisions() {
@@ -454,10 +471,10 @@ class GameScene extends Phaser.Scene {
     // Update all active incoming calls
     for (let i = this.incomingCalls.length - 1; i >= 0; i--) {
       const call = this.incomingCalls[i];
-      if (call.sprite && call.sprite.active) {
+      if (call && call.sprite && call.sprite.active) {
         call.update();
       } else {
-        // Remove inactive calls from the array
+        // Remove inactive or undefined calls from the array
         this.incomingCalls.splice(i, 1);
       }
     }
@@ -567,10 +584,10 @@ class GameScene extends Phaser.Scene {
     // Update all active UFOs
     for (let i = this.ufos.length - 1; i >= 0; i--) {
       const ufo = this.ufos[i];
-      if (ufo.sprite && ufo.sprite.active) {
+      if (ufo && ufo.sprite && ufo.sprite.active) {
         ufo.update();
       } else {
-        // Remove inactive UFOs from the array
+        // Remove inactive or undefined UFOs from the array
         this.ufos.splice(i, 1);
         
         // Schedule the next UFO when the current one is destroyed
@@ -912,6 +929,40 @@ class GameScene extends Phaser.Scene {
     }
     
     return blocksCreated;
+  }
+  
+  updateBugs() {
+    // Update all active bugs
+    for (let i = this.bugs.length - 1; i >= 0; i--) {
+      const bug = this.bugs[i];
+      if (bug && bug.sprite && bug.sprite.active) {
+        bug.update();
+      } else {
+        // Remove inactive or undefined bugs from the array
+        this.bugs.splice(i, 1);
+      }
+    }
+  }
+  
+  handlePlayerBugCollision(player, bugSprite) {
+    // Get the bug instance from the sprite
+    const bug = bugSprite.simpleBugInstance;
+    if (bug) {
+      // Trigger the bug explosion effect
+      bug.explode();
+    }
+  }
+  
+  createSimpleBug(x, y) {
+    const bug = new SimpleBug(this, x, y);
+    this.bugs.push(bug);
+    
+    // Add the bug sprite to the bugGroup for collision detection
+    if (this.bugGroup) {
+      this.bugGroup.add(bug.sprite);
+    }
+    
+    return bug;
   }
 }
 
