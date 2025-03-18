@@ -783,31 +783,46 @@ class GameScene extends Phaser.Scene {
     return incomingCall;
   }
   
-  createXXLBlock() {
-    console.log('Creating XXL block in GameScene');
+  createBlock(category = 'XXL') {
+    console.log(`Creating ${category} block in GameScene`);
     
-    // Find a suitable position for the XXL block
+    // Find a suitable position for the block
     const existingBlocks = this.scopeBlockInstances;
-    
-    // Find existing XXL blocks 
-    const xxlBlocks = existingBlocks.filter(block => 
-      block.category === 'XXL' && block.sprite && block.sprite.active
-    );
-    
     let blockY, finalX;
     
-    if (xxlBlocks.length > 0) {
-      // If there are existing XXL blocks, place the new one to the side
+    // Configuration based on category
+    const blockConfig = {
+      'XXL': {
+        headerText: '⚠️ FEATURE ADDED! ⚠️',
+        headerColor: 0xFF0000,
+        plural: 'FEATURES'
+      },
+      'M': {
+        headerText: '💻 TASK ADDED! 💻',
+        headerColor: 0xFFFF00,
+        plural: 'TASKS'
+      }
+    };
+    
+    const config = blockConfig[category] || blockConfig['XXL']; // Default to XXL if category not found
+    
+    // Find existing blocks of the same category
+    const sameTypeBlocks = existingBlocks.filter(block => 
+      block.category === category && block.sprite && block.sprite.active
+    );
+    
+    if (sameTypeBlocks.length > 0) {
+      // If there are existing blocks of the same type, place the new one to the side
       
       // Sort blocks by x position
-      xxlBlocks.sort((a, b) => a.sprite.x - b.sprite.x);
+      sameTypeBlocks.sort((a, b) => a.sprite.x - b.sprite.x);
       
       // Check space on either side
-      const leftmostBlock = xxlBlocks[0];
-      const rightmostBlock = xxlBlocks[xxlBlocks.length - 1];
+      const leftmostBlock = sameTypeBlocks[0];
+      const rightmostBlock = sameTypeBlocks[sameTypeBlocks.length - 1];
       
-      // Use the y position of existing XXL blocks
-      blockY = xxlBlocks[0].sprite.y;
+      // Use the y position of existing blocks
+      blockY = sameTypeBlocks[0].sprite.y;
       
       // Decide whether to place on left or right side
       const spaceOnLeft = leftmostBlock.sprite.x;
@@ -820,88 +835,30 @@ class GameScene extends Phaser.Scene {
         // Place on right if there's enough space
         finalX = rightmostBlock.sprite.x + rightmostBlock.width + 20;
       } else {
-        // If no horizontal space, place below (fallback to original behavior)
-        // Find the lowest block
-        let lowestY = START_Y;
-        let lowestBlock = null;
-        
-        for (const block of existingBlocks) {
-          if (block.sprite && block.sprite.active && block.sprite.y > lowestY) {
-            lowestY = block.sprite.y;
-            lowestBlock = block;
-          }
-        }
-        
-        blockY = lowestBlock ? lowestY + V_SPACING : PLAYABLE_HEIGHT - 150;
-        
-        // Use horizontal position near the middle
-        const middleX = CANVAS_WIDTH / 2 - BLOCK_WIDTH / 2;
-        const randomOffsetX = Math.floor(Math.random() * 80) - 40; // Random offset between -40 and +40 pixels
-        finalX = Math.max(20, Math.min(CANVAS_WIDTH - BLOCK_WIDTH - 20, middleX + randomOffsetX));
+        // If no horizontal space, place below (fallback to default position)
+        blockY = this.getLowestBlockPosition(existingBlocks);
+        finalX = this.getDefaultBlockPosition(existingBlocks);
       }
     } else {
-      // If no XXL blocks exist, use the default positioning from the original code
-      // Find the lowest block (with highest Y value) that is still active
-      let lowestY = START_Y;
-      let lowestBlock = null;
-      
-      for (const block of existingBlocks) {
-        if (block.sprite && block.sprite.active && block.sprite.y > lowestY) {
-          lowestY = block.sprite.y;
-          lowestBlock = block;
-        }
-      }
-      
-      // Calculate position below the lowest block
-      // If no blocks exist, use a default position near the bottom of the playable area
-      blockY = lowestBlock ? lowestY + V_SPACING : PLAYABLE_HEIGHT - 150;
-      
-      // Add slight horizontal randomness
-      const middleX = CANVAS_WIDTH / 2 - BLOCK_WIDTH / 2;
-      const randomOffsetX = Math.floor(Math.random() * 80) - 40; // Random offset between -40 and +40 pixels
-      finalX = Math.max(20, Math.min(CANVAS_WIDTH - BLOCK_WIDTH - 20, middleX + randomOffsetX));
+      // Use default positioning if no blocks of the same type exist
+      finalX = this.getDefaultBlockPosition(existingBlocks);
+      blockY = this.getLowestBlockPosition(existingBlocks);
     }
     
-    // Create the XXL block
-    const xxlBlock = new ScopeBlock(this, finalX, blockY, 'XXL');
-    this.scopeBlockInstances.push(xxlBlock);
+    // Create the block
+    const block = new ScopeBlock(this, finalX, blockY, category);
+    this.scopeBlockInstances.push(block);
     
     // Show notification in header
     if (this.scrumBoard) {
-      this.scrumBoard.setCustomBlinkingHeader('⚠️ FEATURE ADDED! ⚠️', 3000, 0xFF0000);
+      this.scrumBoard.setCustomBlinkingHeader(config.headerText, 3000, config.headerColor);
     }
     
-    return xxlBlock;
+    return block;
   }
   
-  // Method to create multiple XXL blocks
-  createXXLBlocks(count) {
-    console.log(`Creating ${count} XXL blocks in GameScene`);
-    
-    const blocksCreated = [];
-    
-    // Create the requested number of XXL blocks by calling createXXLBlock multiple times
-    for (let i = 0; i < count; i++) {
-      const xxlBlock = this.createXXLBlock();
-      blocksCreated.push(xxlBlock);
-    }
-    
-    // Show notification in header if more than one block was created
-    // (individual notifications are already shown by createXXLBlock, this adds a summary)
-    if (count > 1 && this.scrumBoard) {
-      this.scrumBoard.setCustomBlinkingHeader(`⚠️ ${count} FEATURES ADDED! ⚠️`, 3000, 0xFF0000);
-    }
-    
-    return blocksCreated;
-  }
-  
-  // Method to create M blocks (similar to XXL blocks but with category 'M')
-  createMBlock() {
-    console.log('Creating M block in GameScene');
-    
-    const existingBlocks = this.scopeBlockInstances;
-    
-    // Find the lowest block (with highest Y value) that is still active
+  // Helper method to get the lowest block position
+  getLowestBlockPosition(existingBlocks) {
     let lowestY = START_Y;
     let lowestBlock = null;
     
@@ -914,44 +871,65 @@ class GameScene extends Phaser.Scene {
     
     // Calculate position below the lowest block
     // If no blocks exist, use a default position near the bottom of the playable area
-    const blockY = lowestBlock ? lowestY + V_SPACING : PLAYABLE_HEIGHT - 150;
-    
+    return lowestBlock ? lowestY + V_SPACING : PLAYABLE_HEIGHT - 150;
+  }
+  
+  // Helper method to get a default horizontal position
+  getDefaultBlockPosition(existingBlocks) {
     // Add slight horizontal randomness
     const middleX = CANVAS_WIDTH / 2 - BLOCK_WIDTH / 2;
     const randomOffsetX = Math.floor(Math.random() * 80) - 40; // Random offset between -40 and +40 pixels
-    const finalX = Math.max(20, Math.min(CANVAS_WIDTH - BLOCK_WIDTH - 20, middleX + randomOffsetX));
-    
-    // Create the M block
-    const mBlock = new ScopeBlock(this, finalX, blockY, 'M');
-    this.scopeBlockInstances.push(mBlock);
-    
-    // Show notification in header
-    if (this.scrumBoard) {
-      this.scrumBoard.setCustomBlinkingHeader('💻 TASK ADDED! 💻', 3000, 0xFFFF00);
-    }
-    
-    return mBlock;
+    return Math.max(20, Math.min(CANVAS_WIDTH - BLOCK_WIDTH - 20, middleX + randomOffsetX));
   }
   
-  // Method to create multiple M blocks
-  createMBlocks(count) {
-    console.log(`Creating ${count} M blocks in GameScene`);
+  // Method to create multiple blocks
+  createBlocks(category = 'XXL', count = 1) {
+    console.log(`Creating ${count} ${category} blocks in GameScene`);
     
     const blocksCreated = [];
     
-    // Create the requested number of M blocks by calling createMBlock multiple times
+    // Create the requested number of blocks by calling createBlock multiple times
     for (let i = 0; i < count; i++) {
-      const mBlock = this.createMBlock();
-      blocksCreated.push(mBlock);
+      const block = this.createBlock(category);
+      blocksCreated.push(block);
     }
     
     // Show notification in header if more than one block was created
-    // (individual notifications are already shown by createMBlock, this adds a summary)
     if (count > 1 && this.scrumBoard) {
-      this.scrumBoard.setCustomBlinkingHeader(`💻 ${count} TASKS ADDED! 💻`, 3000, 0xFFFF00);
+      // Get the correct configuration for this category
+      const blockConfig = {
+        'XXL': {
+          headerText: `⚠️ ${count} FEATURES ADDED! ⚠️`,
+          headerColor: 0xFF0000
+        },
+        'M': {
+          headerText: `💻 ${count} TASKS ADDED! 💻`,
+          headerColor: 0xFFFF00
+        }
+      };
+      
+      const config = blockConfig[category] || blockConfig['XXL']; // Default to XXL if category not found
+      this.scrumBoard.setCustomBlinkingHeader(config.headerText, 3000, config.headerColor);
     }
     
     return blocksCreated;
+  }
+  
+  // Wrapper methods to maintain backward compatibility
+  createXXLBlock() {
+    return this.createBlock('XXL');
+  }
+  
+  createXXLBlocks(count) {
+    return this.createBlocks('XXL', count);
+  }
+  
+  createMBlock() {
+    return this.createBlock('M');
+  }
+  
+  createMBlocks(count) {
+    return this.createBlocks('M', count);
   }
 } 
 
