@@ -380,11 +380,8 @@ class IncomingCallDialog {
       // For non-meeting effects, show the normal continue prompt
       this.promptText.setText(this.CONTINUE_MESSAGE);
       
-      // Apply the effect immediately ONLY for effects that need UI updates
-      // Exclude addXXLBlock which should only be applied when dialog is closed
-      if (this.currentEffect && this.currentEffect !== 'addXXLBlock') {
-        this.applyEffect();
-      }
+      // REMOVED: No longer apply effects immediately during activation
+      // All effects will now be applied only when the dialog closes
     }
     
     // Start blinking animation for title (attention grabbing)
@@ -395,7 +392,7 @@ class IncomingCallDialog {
     
     return true;
   }
-
+  
   // ... rest of the methods would continue here with IncomingCallDialog instead of ScrumBoard
   
   // Other methods like update(), deactivate(), etc. with the same logic but renamed references
@@ -510,22 +507,35 @@ class IncomingCallDialog {
     
     // Check if there is an effect to apply and it hasn't been applied yet
     if (this.currentEffect && !this.messageComplete) {
-      console.log(`Applying effect '${this.currentEffect}' when closing dialogue`);
+      console.log(`Closing dialogue before applying effect '${this.currentEffect}'`);
       
-      // Apply the effect - this is where addXXLBlock and other closing effects should be applied
-      this.applyEffect();
+      // Store the current effect and character for later use
+      const effectToApply = this.currentEffect;
+      const effectCharacter = this.character;
+      
+      // Mark message as complete before deactivating
       this.messageComplete = true;
       
-      // Use a short delay before deactivating to ensure effect is properly applied
-      this.scene.time.delayedCall(300, () => {
-        // Deactivate the dialog (which will restore the game state)
-        this.deactivate();
+      // First deactivate the dialog (but keep a reference to the scene)
+      const gameScene = this.scene;
+      this.deactivate();
+      
+      // After dialog is closed, apply the effect with a short delay
+      gameScene.time.delayedCall(100, () => {
+        // Apply the effect
+        console.log(`Applying effect: ${effectToApply}`);
+        this.applyEffectAfterClose(effectToApply);
         
         // For 'lockWeapon' effect, emit dialogClosed event to start countdown
-        if (this.currentEffect === 'lockWeapon') {
-          this.scene.events.emit('dialogClosed');
+        if (effectToApply === 'lockWeapon') {
+          gameScene.events.emit('dialogClosed');
           console.log('Dialog closed event emitted for weapon lock countdown');
         }
+        
+        // Reset the header after a short duration
+        gameScene.time.delayedCall(2000, () => {
+          this.resetHeader();
+        });
       });
     } else {
       // No effect to apply or already applied, just deactivate
@@ -533,55 +543,10 @@ class IncomingCallDialog {
     }
   }
   
-  // Method to deactivate the dialog normally
-  deactivate() {
-    console.log('Deactivating IncomingCallDialog normally');
-    
-    // Similar to forceDeactivate but might have some different behavior
-    this.active = false;
-    
-    // Show only the header instead of hiding the entire UI
-    this.showHeaderOnly();
-    
-    // Stop any blinking
-    this.stopBlinking();
-    
-    // Reset title text to default
-    this.titleText.setText(this.headerTexts.DEFAULT);
-    // Explicitly set the default color
-    this.titleBox.fillColor = 0x4b6584;
-    
-    // Restore the previous game state if it exists, otherwise set it to PLAYING
-    if (this.previousGameState) {
-      this.scene.gameState = this.previousGameState;
-      console.log(`Game state restored to ${this.previousGameState}`);
-    } else {
-      this.scene.gameState = GAME_STATES.PLAYING;
-      console.log('Game state set back to PLAYING');
-    }
-    
-    // Resume the incoming call timer if it exists and is paused
-    if (this.scene.incomingCallTimer && this.scene.incomingCallTimer.paused) {
-      this.scene.incomingCallTimer.paused = false;
-      console.log('Resumed incoming call timer');
-    }
-    
-    // If weapon lock effect was active, ensure the countdown is properly synchronized
-    if (this.currentEffect === 'lockWeapon' && this.weaponLockActive) {
-      this.scene.events.emit('dialogClosed');
-      console.log('Emitted dialogClosed event during deactivation for weapon lock');
-    }
-    
-    console.log('IncomingCallDialog deactivated, incoming calls will now be generated again');
-  }
-  
-  // Method to apply the current effect
-  applyEffect() {
-    // Implement effect application logic
-    console.log(`Applying effect: ${this.currentEffect}`);
-    
+  // New method to apply effects after the dialog is closed
+  applyEffectAfterClose(effectName) {
     // Handle different effect types
-    switch (this.currentEffect) {
+    switch (effectName) {
       case 'meeting':
         // Meeting effect is handled separately through setupMeetingMode
         console.log('Meeting effect will be handled through meeting mode setup');
@@ -610,10 +575,8 @@ class IncomingCallDialog {
         timerDisplay.setOrigin(0.5, 0);
         timerDisplay.setDepth(1000);
         
-        // Set up a timer to count down and unlock the weapon
-        let countdown = lockDuration;
-        
         // Define an update function for the timer
+        let countdown = lockDuration;
         const updateTimer = () => {
           countdown--;
           timerDisplay.setText('WEAPON LOCKED: ' + countdown + 's');
@@ -638,23 +601,13 @@ class IncomingCallDialog {
           }
         };
         
-        // Wait for the dialog closed event to start the timer
-        this.scene.events.once('dialogClosed', () => {
-          // Start the first update immediately
-          updateTimer();
-        });
-        
-        // Emit the event when dialog is deactivated
-        this.scene.events.once('update', () => {
-          if (!this.active) {
-            this.scene.events.emit('dialogClosed');
-          }
-        });
+        // Start the countdown immediately
+        updateTimer();
         break;
         
       case 'addXXLBlock':
         // Create the XXL block immediately to avoid timing issues
-        console.log('Creating XXL block immediately');
+        console.log('Creating XXL block after dialog closed');
         // Add a short-term flag to prevent double calls during the same dialog interaction
         if (this.scene && this.scene.createXXLBlock && !this._blockBeingCreated) {
           this._blockBeingCreated = true;
@@ -794,8 +747,17 @@ class IncomingCallDialog {
         break;
         
       default:
-        console.log(`Unknown effect: ${this.currentEffect}`);
+        console.log(`Unknown effect: ${effectName}`);
         break;
+    }
+  }
+  
+  // Method to apply the current effect - keep this method for compatibility
+  applyEffect() {
+    // This method is kept for compatibility but should now call applyEffectAfterClose
+    console.log(`Calling applyEffect() has been deprecated - use applyEffectAfterClose() instead`);
+    if (this.currentEffect) {
+      this.applyEffectAfterClose(this.currentEffect);
     }
   }
   
@@ -853,22 +815,10 @@ class IncomingCallDialog {
       this.optionBText.setVisible(false);
       this.promptText.setText("Press UP/DOWN to continue");
       
-      // Apply rewards based on correctness of the answer
-      if (selectedOption.correct) {
-        // Correct answer: 80% chance to add 3 M Scope Blocks (switched from 20% XXL)
-        if (Math.random() < 0.8) {
-          if (this.scene && this.scene.createMBlocks) {
-            this.scene.createMBlocks(3);
-          }
-        }
-      } else {
-        // Incorrect answer: 20% chance to add 3 XXL Scope Blocks (switched from 80% M)
-        if (Math.random() < 0.2) {
-          if (this.scene && this.scene.createXXLBlocks) {
-            this.scene.createXXLBlocks(3);
-          }
-        }
-      }
+      // Store the selected option for later application
+      this.selectedMeetingOption = selectedOption;
+      
+      // No longer apply rewards immediately - they'll be applied when the dialog closes
     }
   }
   
@@ -900,6 +850,30 @@ class IncomingCallDialog {
   // Helper method to end the meeting
   endMeeting() {
     console.log('Meeting ended, returning to playing state');
+    
+    // Apply meeting rewards based on selected option when ending the meeting
+    if (this.selectedMeetingOption) {
+      if (this.selectedMeetingOption.correct) {
+        // Correct answer: 80% chance to add 3 M Scope Blocks
+        if (Math.random() < 0.8) {
+          if (this.scene && this.scene.createMBlocks) {
+            console.log('Applying reward: Creating 3 M blocks for correct answer');
+            this.scene.createMBlocks(3);
+          }
+        }
+      } else {
+        // Incorrect answer: 20% chance to add 3 XXL Scope Blocks
+        if (Math.random() < 0.2) {
+          if (this.scene && this.scene.createXXLBlocks) {
+            console.log('Applying penalty: Creating 3 XXL blocks for incorrect answer');
+            this.scene.createXXLBlocks(3);
+          }
+        }
+      }
+      // Clear the selected option
+      this.selectedMeetingOption = null;
+    }
+    
     this.scene.gameState = GAME_STATES.PLAYING;
     this.deactivate();
   }
@@ -978,6 +952,48 @@ class IncomingCallDialog {
         }
       }
     }
+  }
+  
+  // Method to deactivate the dialog normally
+  deactivate() {
+    console.log('Deactivating IncomingCallDialog normally');
+    
+    // Similar to forceDeactivate but might have some different behavior
+    this.active = false;
+    
+    // Show only the header instead of hiding the entire UI
+    this.showHeaderOnly();
+    
+    // Stop any blinking
+    this.stopBlinking();
+    
+    // Reset title text to default
+    this.titleText.setText(this.headerTexts.DEFAULT);
+    // Explicitly set the default color
+    this.titleBox.fillColor = 0x4b6584;
+    
+    // Restore the previous game state if it exists, otherwise set it to PLAYING
+    if (this.previousGameState) {
+      this.scene.gameState = this.previousGameState;
+      console.log(`Game state restored to ${this.previousGameState}`);
+    } else {
+      this.scene.gameState = GAME_STATES.PLAYING;
+      console.log('Game state set back to PLAYING');
+    }
+    
+    // Resume the incoming call timer if it exists and is paused
+    if (this.scene.incomingCallTimer && this.scene.incomingCallTimer.paused) {
+      this.scene.incomingCallTimer.paused = false;
+      console.log('Resumed incoming call timer');
+    }
+    
+    // If weapon lock effect was active, ensure the countdown is properly synchronized
+    if (this.currentEffect === 'lockWeapon' && this.weaponLockActive) {
+      this.scene.events.emit('dialogClosed');
+      console.log('Emitted dialogClosed event during deactivation for weapon lock');
+    }
+    
+    console.log('IncomingCallDialog deactivated, incoming calls will now be generated again');
   }
   
   // The last line should be:

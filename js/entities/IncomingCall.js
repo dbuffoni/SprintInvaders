@@ -321,9 +321,6 @@ class IncomingCall {
       playerCenterX, playerCenterY
     );
     
-    // Debug logging to help diagnose issues
-    console.log(`Explosion at (${this.sprite.x}, ${this.sprite.y}), Player at (${playerCenterX}, ${playerCenterY}), Distance: ${distanceToPlayer}, Radius: ${this.explosionRadius}`);
-    
     // Check if any part of the player is within explosion radius
     // Adding a small buffer to make collision detection more forgiving
     if (distanceToPlayer <= this.explosionRadius + 5) {
@@ -371,30 +368,6 @@ class IncomingCall {
       // Use the character that was already determined when creating this call
       this.scene.scrumBoard.activate(this.character);
       
-      // Add visual indicator that a call was triggered - use different colors for good/evil
-      const textColor = this.character.isEvil ? '#FF0000' : '#00FF00';
-      const callTriggeredText = this.scene.add.text(
-        this.scene.cameras.main.width / 2,
-        this.scene.cameras.main.height / 2,
-        `INCOMING CALL FROM ${this.character.name}!`,
-        {
-          font: '24px Arial',
-          fill: textColor,
-          stroke: '#000000',
-          strokeThickness: 4
-        }
-      );
-      callTriggeredText.setOrigin(0.5, 0.5);
-      callTriggeredText.setDepth(1000);
-      
-      // Fade out and destroy the text after a short duration
-      this.scene.tweens.add({
-        targets: callTriggeredText,
-        alpha: 0,
-        y: this.scene.cameras.main.height / 2 - 50,
-        duration: 1000,
-        onComplete: () => callTriggeredText.destroy()
-      });
     }
   }
   
