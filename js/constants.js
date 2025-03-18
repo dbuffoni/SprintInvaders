@@ -77,7 +77,7 @@ export const INCOMING_CALL_SIZE = 15; // Size of the incoming call bomb shape
 export const INCOMING_CALL_COLOR = 0x1E90FF; // Default color for incoming calls (used as fallback)
 export const INCOMING_CALL_EVIL_COLOR = 0xFF4500; // Evil character calls (OrangeRed)
 export const INCOMING_CALL_GOOD_COLOR = 0x32CD32; // Good character calls (LimeGreen)
-export const INCOMING_CALL_EXPLOSION_RADIUS = 75; // Explosion radius when call hits bottom (increased from 60)
+export const INCOMING_CALL_EXPLOSION_RADIUS = 100; // Explosion radius when call hits bottom (increased from 60)
 export const INCOMING_CALL_EXPLOSION_DURATION = 800; // Duration of explosion animation in milliseconds
 export const INCOMING_CALL_EXPLOSION_PARTICLES = 30; // Number of particles in explosion
 export const INCOMING_CALL_INITIAL_RATE = 1000; // Initial rate of incoming calls in milliseconds (5 seconds)
@@ -103,3 +103,19 @@ export const CHARACTER_PROPORTIONS = {
   EVIL: 0.9, // 50% chance for evil character call
   GOOD: 0.1  // 50% chance for good character call
 }; 
+
+// Simple Bug constants
+export const SIMPLE_BUG_SIZE = 6; // Size of the bug triangle
+export const SIMPLE_BUG_COLOR = 0xFF0000; // Red color for the bug
+export const SIMPLE_BUG_EXPLOSION_RADIUS = 40; // Explosion radius when bug hits player
+export const SIMPLE_BUG_EXPLOSION_DURATION = 500; // Duration of explosion animation in milliseconds
+export const SIMPLE_BUG_EXPLOSION_PARTICLES = 20; // Number of particles in explosion
+export const SIMPLE_BUG_MIN_SPEED = 75; // Minimum fall speed
+export const SIMPLE_BUG_MAX_SPEED = 150; // Maximum fall speed
+export const SIMPLE_BUG_GENERATION_CHANCE = {
+  'S': 0.001, // Chance per frame for small blocks to generate a bug
+  'M': 0.003,  // Medium blocks generate bugs more frequently
+  'L': 0.006,  // Large blocks generate bugs most frequently
+  'XXL': 0.01 // XXL blocks have the highest chance
+};
+export const SIMPLE_BUG_CHANCE_INCREASE_PER_SPRINT = 0.0002; // Increase in bug generation chance per sprint 
