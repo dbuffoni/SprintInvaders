@@ -786,79 +786,99 @@ class GameScene extends Phaser.Scene {
   createBlock(category = 'XXL') {
     console.log(`Creating ${category} block in GameScene`);
     
-    // Find a suitable position for the block
-    const existingBlocks = this.scopeBlockInstances;
-    let blockY, finalX;
-    
-    // Find existing blocks of the same category
-    const sameTypeBlocks = existingBlocks.filter(block => 
-      block.category === category && block.sprite && block.sprite.active
-    );
-    
-    if (sameTypeBlocks.length > 0) {
-      // If there are existing blocks of the same type, place the new one to the side
-      
-      // Sort blocks by x position
-      sameTypeBlocks.sort((a, b) => a.sprite.x - b.sprite.x);
-      
-      // Check space on either side
-      const leftmostBlock = sameTypeBlocks[0];
-      const rightmostBlock = sameTypeBlocks[sameTypeBlocks.length - 1];
-      
-      // Use the y position of existing blocks
-      blockY = sameTypeBlocks[0].sprite.y;
-      
-      // Decide whether to place on left or right side
-      const spaceOnLeft = leftmostBlock.sprite.x;
-      const spaceOnRight = CANVAS_WIDTH - (rightmostBlock.sprite.x + rightmostBlock.width);
-      
-      if (spaceOnLeft > spaceOnRight && spaceOnLeft >= BLOCK_WIDTH + 20) {
-        // Place on left if there's enough space (block width + padding)
-        finalX = Math.max(20, leftmostBlock.sprite.x - BLOCK_WIDTH - 20);
-      } else if (spaceOnRight >= BLOCK_WIDTH + 20) {
-        // Place on right if there's enough space
-        finalX = rightmostBlock.sprite.x + rightmostBlock.width + 20;
-      } else {
-        // If no horizontal space, place below (fallback to default position)
-        blockY = this.getLowestBlockPosition(existingBlocks);
-        finalX = this.getDefaultBlockPosition(existingBlocks);
-      }
-    } else {
-      // Use default positioning if no blocks of the same type exist
-      finalX = this.getDefaultBlockPosition(existingBlocks);
-      blockY = this.getLowestBlockPosition(existingBlocks);
-    }
-    
-    // Create the block
-    const block = new ScopeBlock(this, finalX, blockY, category);
+    // Create the block at a temporary position (0,0)
+    // We'll position it properly using the disposeBlock method
+    const block = new ScopeBlock(this, 0, 0, category);
     this.scopeBlockInstances.push(block);
+    
+    // Use the new disposal method to position the block
+    this.disposeBlock(block);
     
     return block;
   }
   
-  // Helper method to get the lowest block position
-  getLowestBlockPosition(existingBlocks) {
-    let lowestY = START_Y;
-    let lowestBlock = null;
+  // New method to dispose blocks - works for all categories
+  disposeBlock(block) {
+    console.log(`Disposing block of category ${block.category}`);
     
-    for (const block of existingBlocks) {
-      if (block.sprite && block.sprite.active && block.sprite.y > lowestY) {
-        lowestY = block.sprite.y;
-        lowestBlock = block;
+    // Get all active blocks to analyze existing rows
+    const activeBlocks = this.scopeBlockInstances.filter(b => 
+      b.sprite && b.sprite.active && b !== block
+    );
+    
+    // Find all unique rows (y positions) of existing blocks
+    const existingRows = [...new Set(activeBlocks.map(b => b.sprite.y))].sort((a, b) => a - b);
+    
+    // Set a minimum gap between blocks for proper spacing
+    const minBlockGap = 20; // minimum space between blocks
+    
+    // Try to find space in existing rows
+    let placementFound = false;
+    let targetY, targetX;
+    
+    // Check each existing row for available space
+    for (const rowY of existingRows) {
+      // Get all blocks in this row
+      const blocksInRow = activeBlocks.filter(b => b.sprite.y === rowY);
+      
+      // Sort blocks by x position to find gaps
+      blocksInRow.sort((a, b) => a.sprite.x - b.sprite.x);
+      
+      // Check for space at the beginning of the row
+      if (blocksInRow.length > 0 && blocksInRow[0].sprite.x >= BLOCK_WIDTH + minBlockGap) {
+        targetX = minBlockGap;
+        targetY = rowY;
+        placementFound = true;
+        break;
       }
+      
+      // Check for space at the end of the row
+      if (blocksInRow.length > 0) {
+        const lastBlock = blocksInRow[blocksInRow.length - 1];
+        const rightEdge = lastBlock.sprite.x + lastBlock.width;
+        if (CANVAS_WIDTH - rightEdge >= BLOCK_WIDTH + minBlockGap) {
+          targetX = rightEdge + minBlockGap;
+          targetY = rowY;
+          placementFound = true;
+          break;
+        }
+      }
+      
+      // Check for gaps between blocks
+      for (let i = 0; i < blocksInRow.length - 1; i++) {
+        const rightEdge = blocksInRow[i].sprite.x + blocksInRow[i].width;
+        const gap = blocksInRow[i + 1].sprite.x - rightEdge;
+        
+        if (gap >= BLOCK_WIDTH + (minBlockGap * 2)) {
+          targetX = rightEdge + minBlockGap;
+          targetY = rowY;
+          placementFound = true;
+          break;
+        }
+      }
+      
+      if (placementFound) break;
     }
     
-    // Calculate position below the lowest block
-    // If no blocks exist, use a default position near the bottom of the playable area
-    return lowestBlock ? lowestY + V_SPACING : PLAYABLE_HEIGHT - 150;
-  }
-  
-  // Helper method to get a default horizontal position
-  getDefaultBlockPosition(existingBlocks) {
-    // Add slight horizontal randomness
-    const middleX = CANVAS_WIDTH / 2 - BLOCK_WIDTH / 2;
-    const randomOffsetX = Math.floor(Math.random() * 80) - 40; // Random offset between -40 and +40 pixels
-    return Math.max(20, Math.min(CANVAS_WIDTH - BLOCK_WIDTH - 20, middleX + randomOffsetX));
+    // If no space found in existing rows, create a new row below the lowest block
+    if (!placementFound) {
+      // Find the lowest block
+      let lowestY = existingRows.length > 0 ? Math.max(...existingRows) : START_Y;
+      
+      // Position the block below the lowest row with proper spacing
+      targetY = lowestY + V_SPACING;
+      
+      // Center the block horizontally with some randomness
+      const middleX = CANVAS_WIDTH / 2 - BLOCK_WIDTH / 2;
+      const randomOffsetX = Math.floor(Math.random() * 80) - 40; // Random offset between -40 and +40 pixels
+      targetX = Math.max(minBlockGap, Math.min(CANVAS_WIDTH - BLOCK_WIDTH - minBlockGap, middleX + randomOffsetX));
+    }
+    
+    // Update block position
+    block.x = targetX;
+    block.y = targetY;
+    
+    return block;
   }
   
   // Method to create multiple blocks
@@ -893,6 +913,6 @@ class GameScene extends Phaser.Scene {
     
     return blocksCreated;
   }
-} 
+}
 
 export default GameScene; 
