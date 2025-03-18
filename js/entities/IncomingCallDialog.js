@@ -851,31 +851,39 @@ class IncomingCallDialog {
   endMeeting() {
     console.log('Meeting ended, returning to playing state');
     
-    // Apply meeting rewards based on selected option when ending the meeting
-    if (this.selectedMeetingOption) {
-      if (this.selectedMeetingOption.correct) {
-        // Correct answer: 80% chance to add 3 M Scope Blocks
-        if (Math.random() < 0.8) {
-          if (this.scene && this.scene.createBlocks) {
-            console.log('Applying reward: Creating 3 M blocks for correct answer');
-            this.scene.createBlocks('M', 3);
-          }
-        }
-      } else {
-        // Incorrect answer: 20% chance to add 3 XXL Scope Blocks
-        if (Math.random() < 0.2) {
-          if (this.scene && this.scene.createBlocks) {
-            console.log('Applying penalty: Creating 3 XXL blocks for incorrect answer');
-            this.scene.createBlocks('XXL', 3);
-          }
-        }
-      }
-      // Clear the selected option
-      this.selectedMeetingOption = null;
-    }
+    // Store selected option before deactivating
+    const selectedOption = this.selectedMeetingOption;
+    this.selectedMeetingOption = null;
     
+    // Store reference to scene before deactivating
+    const gameScene = this.scene;
+    
+    // Change game state and deactivate dialog first
     this.scene.gameState = GAME_STATES.PLAYING;
     this.deactivate();
+    
+    // Apply meeting rewards based on selected option after dialog is closed
+    if (selectedOption) {
+      gameScene.time.delayedCall(100, () => {
+        if (selectedOption.correct) {
+          // Correct answer: 80% chance to add 3 M Scope Blocks
+          if (Math.random() < 0.8) {
+            if (gameScene && gameScene.createBlocks) {
+              console.log('Applying reward: Creating 3 M blocks for correct answer');
+              gameScene.createBlocks('M', 3);
+            }
+          }
+        } else {
+          // Incorrect answer: 20% chance to add 3 XXL Scope Blocks
+          if (Math.random() < 0.2) {
+            if (gameScene && gameScene.createBlocks) {
+              console.log('Applying penalty: Creating 3 XXL blocks for incorrect answer');
+              gameScene.createBlocks('XXL', 3);
+            }
+          }
+        }
+      });
+    }
   }
   
   // Method to set up meeting mode
