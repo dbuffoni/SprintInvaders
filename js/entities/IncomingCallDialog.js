@@ -275,6 +275,38 @@ class IncomingCallDialog {
     }
   }
   
+  // Make all active incoming calls disappear with a shrinking effect
+  shrinkAllActiveCalls() {
+    // Check if scene and incomingCalls array exists
+    if (this.scene && this.scene.incomingCalls && this.scene.incomingCalls.length > 0) {
+      console.log(`Shrinking ${this.scene.incomingCalls.length} active incoming calls`);
+      
+      // Create a copy of the array to avoid modification during iteration
+      const activeCalls = [...this.scene.incomingCalls];
+      
+      // Apply shrinking effect to each call
+      activeCalls.forEach(call => {
+        if (call && call.sprite && call.sprite.active) {
+          // Create shrinking animation
+          this.scene.tweens.add({
+            targets: call.sprite,
+            scale: 0,
+            alpha: 0,
+            duration: 500, // Half second shrink
+            ease: 'Power2',
+            onComplete: () => {
+              // Remove the call
+              call.destroy();
+            }
+          });
+        }
+      });
+      
+      // Clear the incomingCalls array since we're destroying all of them
+      this.scene.incomingCalls = [];
+    }
+  }
+  
   // Set the header to UFO mode
   setUFOHeader() {
     if (!this.active) {
@@ -334,6 +366,9 @@ class IncomingCallDialog {
       this.scene.incomingCallTimer.paused = true;
       console.log('Paused incoming call timer');
     }
+    
+    // Make all active incoming calls disappear with a shrinking effect
+    this.shrinkAllActiveCalls();
     
     // Log that incoming calls won't be generated while board is active
     console.log('IncomingCallDialog activated, incoming calls will not be generated');
