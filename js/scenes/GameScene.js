@@ -62,6 +62,7 @@ class GameScene extends Phaser.Scene {
     this.ufoTimer = null; // Timer for spawning UFOs
     this.xxlBlockCreated = false; // Flag to track if an XXL block has been created in the current sprint
     this.ufosToSpawn = UFO_APPEARANCES_PER_SPRINT; // Track remaining UFOs to spawn
+    this.manuallyPaused = false;
     
     // Check if we have an override message index from the StartScene
     if (data && data.overrideMessageIndex !== undefined) {
@@ -83,7 +84,8 @@ class GameScene extends Phaser.Scene {
       up: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.UP),
       down: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.DOWN),
       enter: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ENTER),
-      r: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.R)
+      r: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.R),
+      p: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.P)
     };
 
     // Create bullet group - must be before player creation
@@ -136,8 +138,11 @@ class GameScene extends Phaser.Scene {
         // When paused due to character message, only update the scrum board
         this.updateScrumBoard();
         
-        // Still allow player movement when paused
-        this.updatePlayer();
+        // Still allow player movement when paused due to character message
+        // but not when manually paused with P key
+        if (!this.manuallyPaused) {
+          this.updatePlayer();
+        }
       }
       return;
     }
@@ -438,9 +443,13 @@ class GameScene extends Phaser.Scene {
     
     // R key to restart game
     this.input.keyboard.on('keydown-R', () => {
-      if (this.gameState === GAME_STATES.OVER) {
-        this.initGame();
-      }
+      // Reset the game regardless of the current state
+      this.initGame();
+    });
+    
+    // P key to pause/unpause the game
+    this.input.keyboard.on('keydown-P', () => {
+      this.togglePause();
     });
   }
   
@@ -753,6 +762,9 @@ class GameScene extends Phaser.Scene {
   }
   
   initGame() {
+    // Cleanup any active effects
+    this.resetEffects();
+    
     // Reset game state and restart scene
     this.scene.restart();
   }
@@ -789,6 +801,17 @@ class GameScene extends Phaser.Scene {
   }
   
   createIncomingCall(x, y, characterType = null) {
+    // Skip creating incoming calls if any effects are active
+    if (this.scrumBoard) {
+      if (this.scrumBoard.weaponLockActive || 
+          this.scrumBoard.bulletLimitActive || 
+          this.scrumBoard.gameSpeedActive ||
+          this.scrumBoard.unstableAimActive) {
+        console.log('Skipping incoming call creation - effects are active');
+        return null;
+      }
+    }
+    
     const incomingCall = new IncomingCall(this, x, y, characterType);
     this.incomingCalls.push(incomingCall);
     
@@ -963,6 +986,90 @@ class GameScene extends Phaser.Scene {
     }
     
     return bug;
+  }
+  
+  // New method to reset all effects
+  resetEffects() {
+    // Reset gameplay flags
+    this.playerCanShoot = true;
+    this.manuallyPaused = false;
+    
+    // Resume physics and time if they were paused
+    this.physics.resume();
+    this.time.paused = false;
+    
+    // If scrumBoard exists, reset its effects
+    if (this.scrumBoard) {
+      if (this.scrumBoard.weaponLockActive) {
+        this.scrumBoard.weaponLockActive = false;
+      }
+      
+      if (this.scrumBoard.bulletLimitActive) {
+        this.scrumBoard.bulletLimitActive = false;
+      }
+      
+      if (this.scrumBoard.gameSpeedActive) {
+        this.scrumBoard.gameSpeedActive = false;
+        // Reset group speed if it was modified
+        this.groupSpeed = 1;
+      }
+      
+      if (this.scrumBoard.unstableAimActive) {
+        this.scrumBoard.unstableAimActive = false;
+      }
+      
+      // Force deactivate any active dialogues
+      if (this.scrumBoard.active) {
+        this.scrumBoard.forceDeactivate();
+      }
+    }
+    
+    console.log('All effects have been reset');
+  }
+  
+  // New method to toggle pause state
+  togglePause() {
+    if (this.gameState === GAME_STATES.PLAYING) {
+      // Pause the game
+      this.previousGameState = this.gameState;
+      this.gameState = GAME_STATES.PAUSED;
+      this.manuallyPaused = true;
+      
+      // Pause physics and time
+      this.physics.pause();
+      this.time.paused = true;
+      
+      // Create pause text
+      this.pauseText = this.add.text(
+        CANVAS_WIDTH / 2,
+        PLAYABLE_HEIGHT / 2,
+        'GAME PAUSED\n\nPress P to resume',
+        {
+          font: '24px Arial',
+          fill: '#ffffff',
+          align: 'center'
+        }
+      );
+      this.pauseText.setOrigin(0.5);
+      
+      console.log('Game paused');
+    } else if (this.gameState === GAME_STATES.PAUSED && this.manuallyPaused) {
+      // Only unpause if we're in a manually paused state
+      this.gameState = GAME_STATES.PLAYING;
+      this.manuallyPaused = false;
+      
+      // Resume physics and time
+      this.physics.resume();
+      this.time.paused = false;
+      
+      // Remove pause text if it exists
+      if (this.pauseText) {
+        this.pauseText.destroy();
+        this.pauseText = null;
+      }
+      
+      console.log('Game resumed');
+    }
   }
 }
 

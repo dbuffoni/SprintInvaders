@@ -11,8 +11,12 @@ import {
   UFO_DROP_CHANCE,
   CANVAS_WIDTH,
   PLAYABLE_HEIGHT,
-  UFO_SCREEN_TIME
+  UFO_SCREEN_TIME,
+  CHARACTER_PROPORTIONS,
+  CHARACTER_TYPES,
+  UFO_CHARACTER_DROP_RATES
 } from '../constants.js';
+import { getCharacter } from '../characters.js';
 
 class UFO {
   constructor(scene, startFromLeft = Math.random() > 0.5) {
@@ -25,6 +29,22 @@ class UFO {
     this.startFromLeft = startFromLeft;
     this.targetPlayer = false; // Flag to occasionally target the player
     this.canLeaveScreen = false; // Flag indicating whether UFO can leave the screen
+    
+    // Get a random character for this UFO based on good/evil proportions
+    const rand = Math.random();
+    if (rand < CHARACTER_PROPORTIONS.EVIL) {
+      // Randomly choose between evil characters
+      const evilCharacters = CHARACTER_TYPES.EVIL;
+      const randomEvilIndex = Math.floor(Math.random() * evilCharacters.length);
+      this.characterType = evilCharacters[randomEvilIndex];
+      this.character = getCharacter(this.characterType);
+    } else {
+      // Randomly choose between good characters
+      const goodCharacters = CHARACTER_TYPES.GOOD;
+      const randomGoodIndex = Math.floor(Math.random() * goodCharacters.length);
+      this.characterType = goodCharacters[randomGoodIndex];
+      this.character = getCharacter(this.characterType);
+    }
     
     // Determine starting position
     const x = startFromLeft ? -UFO_WIDTH : CANVAS_WIDTH + UFO_WIDTH;
@@ -217,6 +237,34 @@ class UFO {
         return;
       }
       
+      // Check if any effects are active - if so, force UFO to leave
+      if (this.scene.scrumBoard && (
+          this.scene.scrumBoard.weaponLockActive || 
+          this.scene.scrumBoard.bulletLimitActive || 
+          this.scene.scrumBoard.gameSpeedActive ||
+          this.scene.scrumBoard.unstableAimActive)) {
+        console.log('Game effects active - forcing UFO to leave screen');
+        this.canLeaveScreen = true;
+        
+        // Determine closest exit direction
+        const distanceToLeft = this.sprite.x;
+        const distanceToRight = CANVAS_WIDTH - this.sprite.x;
+        
+        if (distanceToLeft < distanceToRight) {
+          // Closer to left edge, head left
+          this.horizontalDirection = -1;
+        } else {
+          // Closer to right edge, head right
+          this.horizontalDirection = 1;
+        }
+        // Apply the new direction with a higher speed to ensure it leaves quickly
+        this.speed = UFO_MAX_SPEED * 2;
+        this.sprite.body.setVelocityX(this.speed * this.horizontalDirection);
+        
+        // Also disable dropping calls
+        return;
+      }
+      
       // Check if UFO can leave the screen
       if (this.canLeaveScreen) {
         // Allow the UFO to leave the screen when time expires
@@ -261,8 +309,11 @@ class UFO {
         this.moveTowardPlayer();
       }
       
-      // Random chance to drop an incoming call
-      if (Math.random() < UFO_DROP_CHANCE) {
+      // Random chance to drop an incoming call based on character type
+      const dropChance = this.character && this.character.isEvil ? 
+        UFO_CHARACTER_DROP_RATES.EVIL : UFO_CHARACTER_DROP_RATES.GOOD;
+      
+      if (Math.random() < dropChance) {
         this.dropIncomingCall();
       }
       
@@ -272,26 +323,36 @@ class UFO {
   }
   
   changeDirection() {
+    // Skip direction changes if trying to leave screen
+    if (this.canLeaveScreen) return;
+    
+    // Skip if sprite inactive
     if (!this.sprite || !this.sprite.active) return;
     
-    // Increment direction change counter
-    this.directionChanges++;
-    
-    // Randomly decide if we should make more dramatic direction changes
-    const dramaticChange = Math.random() < 0.3;
-    
-    if (dramaticChange) {
-      // Occasionally reverse horizontal direction for more interesting patterns
+    // Change horizontal direction randomly with a bias toward continuing
+    if (Math.random() < 0.3) { // 30% chance to reverse
       this.horizontalDirection *= -1;
       this.sprite.body.setVelocityX(this.speed * this.horizontalDirection);
     }
     
-    // Change vertical direction more dynamically
-    const newVerticalVelocity = (Math.random() - 0.5) * UFO_MAX_SPEED;
-    this.sprite.body.setVelocityY(newVerticalVelocity);
+    // Change vertical velocity
+    const verticalVelocity = (Math.random() - 0.5) * UFO_MAX_SPEED / 2;
+    this.sprite.body.setVelocityY(verticalVelocity);
     
     // Adjust speed
     this.adjustSpeed();
+    
+    // Random chance to drop an incoming call
+    // Use different drop rates based on character type
+    const dropChance = this.character && this.character.isEvil ? 
+      UFO_CHARACTER_DROP_RATES.EVIL : UFO_CHARACTER_DROP_RATES.GOOD;
+    
+    if (Math.random() < dropChance) {
+      this.dropIncomingCall();
+    }
+    
+    // Count the direction change
+    this.directionChanges++;
   }
   
   adjustSpeed() {
@@ -346,9 +407,22 @@ class UFO {
       return;
     }
     
-    // Create incoming call at UFO position with a random character type
-    // Character selection will be handled by IncomingCall constructor
-    this.scene.createIncomingCall(this.sprite.x, this.sprite.y + UFO_HEIGHT/2);
+    // Check if any effects are active and skip dropping calls if they are
+    if (this.scene.scrumBoard) {
+      if (this.scene.scrumBoard.weaponLockActive || 
+          this.scene.scrumBoard.bulletLimitActive || 
+          this.scene.scrumBoard.gameSpeedActive ||
+          this.scene.scrumBoard.unstableAimActive) {
+        console.log('Skipping incoming call drop - effects are active');
+        return;
+      }
+    }
+    
+    // Use the stored character type from when this UFO was created
+    // This ensures the UFO consistently uses the same character
+    
+    // Create incoming call at UFO position with this UFO's character type
+    this.scene.createIncomingCall(this.sprite.x, this.sprite.y + UFO_HEIGHT/2, this.characterType);
   }
   
   hit() {

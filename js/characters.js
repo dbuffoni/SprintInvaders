@@ -1,5 +1,5 @@
 // Base Character class
-import { CHARACTER_PROPORTIONS } from './constants.js';
+import { CHARACTER_PROPORTIONS, CHARACTER_TYPES } from './constants.js';
 
 export class Character {
   constructor({name, messages, effects, isEvil}) {
@@ -16,7 +16,8 @@ export class Character {
 // Cache for character instances to avoid repeated creation
 const characterCache = {
   businessAnalyst: null,
-  stageur: null
+  stageur: null,
+  manager: null
 };
 
 // Create a BusinessAnalyst character directly without importing
@@ -206,6 +207,77 @@ function createStageur() {
   return characterCache.stageur;
 }
 
+// Create a Manager character directly without importing
+function createManager() {
+  if (!characterCache.manager) {
+    characterCache.manager = new Character({
+      name: "MANAGER",
+      messages: [
+        "We need to speed things up, the CEO is watching!",
+        "Too many distractions, you should focus on strategic objectives!",
+        "Budget cuts. Use a 56k modem to commit your code!"
+      ],
+      effects: [
+        'speedupGame',
+        'unstableAim',
+        'limitBullets'
+      ],
+      isEvil: true // Manager is evil
+    });
+
+    // Add meeting questions
+    characterCache.manager.meetingQuestions = [
+      {
+        question: "How quickly can we deliver if we pull an all-nighter?",
+        options: [
+          { 
+            text: "By tomorrow morning, absolutely!", 
+            correct: true, 
+            message: "I knew I could count on you! (80% chance of adding 3 M Blocks)" 
+          },
+          { 
+            text: "Quality work takes time, we should stick to the schedule.", 
+            correct: false, 
+            message: "Interesting perspective. Let's discuss it in our 6AM meeting tomorrow. (20% chance of adding 3 XXL Blocks)" 
+          }
+        ]
+      },
+      {
+        question: "Can we cut testing to meet the deadline?",
+        options: [
+          { 
+            text: "Sure, what could possibly go wrong?", 
+            correct: true, 
+            message: "That's the spirit! We'll fix bugs in production. (80% chance of adding 3 M Blocks)" 
+          },
+          { 
+            text: "Skipping tests will create more work in the long run.", 
+            correct: false, 
+            message: "Let me introduce you to our new motto: 'Move Fast and Break Things.' (20% chance of adding 3 XXL Blocks)" 
+          }
+        ]
+      },
+      {
+        question: "Do we really need documentation for this feature?",
+        options: [
+          { 
+            text: "Nope, the code is self-documenting!", 
+            correct: true, 
+            message: "Exactly! Save time where we can. (80% chance of adding 3 M Blocks)" 
+          },
+          { 
+            text: "Yes, it will help with maintenance and onboarding.", 
+            correct: false, 
+            message: "I'll add 'write extensive documentation' to your tasks for this weekend. (20% chance of adding 3 XXL Blocks)" 
+          }
+        ]
+      }
+    ];
+  }
+  
+  return characterCache.manager;
+}
+
 // Factory function to get characters
 export function getCharacter(type) {
   switch(type) {
@@ -213,18 +285,26 @@ export function getCharacter(type) {
       return createBusinessAnalyst();
     case 'stageur':
       return createStageur();
+    case 'manager':
+      return createManager();
     default:
       // Randomly choose a character based on good/evil proportions
       const rand = Math.random();
       if (rand < CHARACTER_PROPORTIONS.EVIL) {
-        return createBusinessAnalyst(); // Evil character
+        // Randomly choose between evil characters
+        const evilCharacters = CHARACTER_TYPES.EVIL;
+        const randomEvilIndex = Math.floor(Math.random() * evilCharacters.length);
+        return getCharacter(evilCharacters[randomEvilIndex]);
       } else {
-        return createStageur(); // Good character
+        // Randomly choose between good characters
+        const goodCharacters = CHARACTER_TYPES.GOOD;
+        const randomGoodIndex = Math.floor(Math.random() * goodCharacters.length);
+        return getCharacter(goodCharacters[randomGoodIndex]);
       }
   }
 }
 
 // Function to get all available character types
 export function getAllCharacterTypes() {
-  return ['businessAnalyst', 'stageur'];
+  return ['businessAnalyst', 'stageur', 'manager'];
 } 

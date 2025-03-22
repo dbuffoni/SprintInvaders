@@ -1,7 +1,18 @@
 // Import constants and functions
-import { CANVAS_WIDTH, PLAYABLE_HEIGHT, INCOMING_CALL_DIALOG_HEIGHT, GAME_STATES, BLOCK_WIDTH, START_Y, HEADER_HEIGHT } from '../constants.js';
+import { CANVAS_WIDTH, PLAYABLE_HEIGHT, INCOMING_CALL_DIALOG_HEIGHT, GAME_STATES, BLOCK_WIDTH, BLOCK_HEIGHT, START_Y, HEADER_HEIGHT, BLOCK_COLORS } from '../constants.js';
 import { getCharacter } from '../characters.js';
 import ScopeBlock from './ScopeBlock.js';
+
+// Define color constants for consistent usage throughout the class
+const COLORS = {
+  DEFAULT: 0x4b6584,         // Default header background
+  ATTENTION: 0xe74c3c,       // Red attention color
+  SUCCESS: 0x004d00,         // Green success color
+  WARNING: 0xFF9900,         // Orange warning color
+  DANGER: 0xFF0000,          // Red danger color
+  EVIL_CHARACTER: 0xC70039,  // Crimson for evil characters
+  GOOD_CHARACTER: 0x2E8B57   // SeaGreen for good characters
+};
 
 class IncomingCallDialog {
   constructor(scene) {
@@ -20,17 +31,20 @@ class IncomingCallDialog {
     this.countdownSeconds = 0; // Initialize countdown display
     this.pendingXXLBlock = false; // Flag to indicate that we need to create the XXL block
     this._blockBeingCreated = false; // Flag to prevent multiple XXL blocks being created simultaneously
+    this.isStatusMessageActive = false; // Flag to track if a status message is currently active
     
     // Title box blinking properties
     this.blinkTimer = 0;
     this.isBlinking = false;
     this.blinkDuration = 120; // 3 seconds at 60fps
     this.blinkInterval = 10; // Blink every quarter second at 60fps
+    this.defaultColor = COLORS.DEFAULT;   // Default color for non-blinking state
+    this.blinkColor = COLORS.ATTENTION;   // Color to blink to
     
     // Header text states
     this.headerTexts = {
       DEFAULT: "Sprint in progress",
-      UFO: "Someone is trying to reach you out...",
+      UFO: "[Character] is trying to reach you out...",
       CALL: "Incoming call"
     };
     
@@ -51,11 +65,156 @@ class IncomingCallDialog {
     this.weaponLockDuration = 8; // 8 seconds
     this.weaponLockActive = false;
     
+    // Store bullet limit details
+    this.bulletLimitActive = false;
+    this.bulletLimitAmount = 5; // Player can shoot only 5 bullets before reloading
+    this.bulletLimitDuration = 20; // 20 seconds total effect duration
+    this.bulletLimitReloadTime = 3; // 3 seconds to reload
+    
+    // Store game speed details
+    this.gameSpeedActive = false;
+    this.gameSpeedFactor = 2.0; // 2x speed
+    this.gameSpeedDuration = 15; // 15 seconds
+    
+    // Store unstable aim details
+    this.unstableAimActive = false;
+    this.unstableAimDuration = 10; // 10 seconds
+    
     // Create UI elements for the incoming call dialog
     this.createBoardUI();
     
     // Initially show only the header
     this.showHeaderOnly();
+  }
+  
+  // Centralized method for showing status messages for all effects
+  showStatusMessage(options) {
+    const {
+      mainMessage, // Main status message text
+      timerMessage, // Timer message format (will have seconds replaced)
+      duration = 0, // Duration in seconds for the effect (0 for no timer) 
+      completionMessage, // Message to show when timer completes
+      headerColor = COLORS.DANGER, // Default color for header during effect 
+      completionColor = COLORS.SUCCESS, // Color for the header when effect completes
+      onUpdate, // Callback to run each second
+      onComplete // Callback to run when timer completes
+    } = options;
+    
+    // Store the original header text to restore later
+    const originalHeaderText = this.titleText.text;
+    const originalHeaderColor = this.titleBox.fillColor;
+    
+    // Set main message in the header
+    if (mainMessage) {
+      // Set the header text and start blinking
+      this.titleText.setText(mainMessage);
+      this.defaultColor = originalHeaderColor;
+      this.blinkColor = headerColor;
+      this.blinkDuration = (duration > 0) ? (duration * 60) : 240; // 4 seconds at 60fps if no duration
+      this.blinkInterval = 10; // Blink every 10 frames
+      this.startBlinking();
+    }
+    
+    // Only create a timer display if we have a duration and timerMessage
+    let timerText = null;
+    if (duration > 0 && timerMessage) {
+      // Create a timer text at the bottom of the screen
+      timerText = this.scene.add.text(
+        this.scene.cameras.main.width / 2,
+        this.scene.cameras.main.height - 50,
+        timerMessage.replace('{duration}', duration),
+        {
+          font: '18px Arial',
+          fill: '#FFFF00',
+          stroke: '#000000',
+          strokeThickness: 2,
+          align: 'center'
+        }
+      );
+      timerText.setOrigin(0.5, 0.5);
+      timerText.setDepth(1000);
+      
+      // Setup countdown
+      let timeRemaining = duration;
+      
+      const updateTimer = () => {
+        timeRemaining--;
+        
+        // Update timer text
+        if (timerText && timerText.active) {
+          timerText.setText(timerMessage.replace('{duration}', timeRemaining));
+        }
+        
+        // Run custom update logic if provided
+        if (onUpdate) {
+          onUpdate(timeRemaining);
+        }
+        
+        if (timeRemaining <= 0) {
+          // Show completion message in header if provided
+          if (completionMessage) {
+            this.stopBlinking();
+            this.titleText.setText(completionMessage);
+            this.titleBox.fillColor = completionColor;
+            
+            // Set a timer to reset the header after a delay
+            this.scene.time.delayedCall(2500, () => {
+              // Restore original header text and color
+              this.titleText.setText(originalHeaderText);
+              this.titleBox.fillColor = originalHeaderColor;
+            });
+          } else {
+            // No completion message, just restore the original header
+            this.titleText.setText(originalHeaderText);
+            this.stopBlinking();
+            this.titleBox.fillColor = originalHeaderColor;
+          }
+          
+          // Destroy timer text
+          if (timerText && timerText.active) {
+            timerText.destroy();
+          }
+          
+          // Run completion callback if provided
+          if (onComplete) {
+            onComplete();
+          }
+        } else {
+          // Continue countdown
+          this.scene.time.delayedCall(1000, updateTimer);
+        }
+      };
+      
+      // Start the timer
+      this.scene.time.delayedCall(1000, updateTimer);
+    } else if (mainMessage && !timerMessage) {
+      // If we have only a main message without a timer, 
+      // restore the header after a delay
+      this.scene.time.delayedCall(3000, () => {
+        this.titleText.setText(originalHeaderText);
+        this.stopBlinking();
+        this.titleBox.fillColor = originalHeaderColor;
+      });
+    }
+    
+    // Add a property to track this status message is active
+    // This will help prevent other parts of the code from resetting the header
+    this.isStatusMessageActive = true;
+    
+    // If there's a timer, clear the status message flag when timer completes
+    if (duration > 0) {
+      this.scene.time.delayedCall(duration * 1000 + 1500, () => {
+        this.isStatusMessageActive = false;
+      });
+    } else {
+      // For messages without a timer, clear after 3 seconds
+      this.scene.time.delayedCall(3000, () => {
+        this.isStatusMessageActive = false;
+      });
+    }
+    
+    // Return a simple object that can be used to reference the timer text
+    return { timerText };
   }
   
   createBoardUI() {
@@ -213,11 +372,11 @@ class IncomingCallDialog {
     this.titleText.setVisible(true);
     this.fullBackground.setVisible(false);
     
-    // Set the header text back to default if not active
-    if (!this.active) {
+    // Set the header text back to default if not active and no status message is showing
+    if (!this.active && !this.isStatusMessageActive) {
       this.titleText.setText(this.headerTexts.DEFAULT);
       // Always reset color to default when showing default text
-      this.titleBox.fillColor = 0x4b6584;
+      this.titleBox.fillColor = COLORS.DEFAULT;
     }
     
     // Hide content elements
@@ -268,10 +427,10 @@ class IncomingCallDialog {
     
     // Reset to the character's color if a character is active, otherwise use default
     if (this.character) {
-      const titleBoxColor = this.character.isEvil ? 0xC70039 : 0x2E8B57; // Crimson for evil, SeaGreen for good
+      const titleBoxColor = this.character.isEvil ? COLORS.EVIL_CHARACTER : COLORS.GOOD_CHARACTER;
       this.titleBox.fillColor = titleBoxColor;
     } else {
-      this.titleBox.fillColor = 0x4b6584; // Default color
+      this.titleBox.fillColor = COLORS.DEFAULT;
     }
   }
   
@@ -310,7 +469,21 @@ class IncomingCallDialog {
   // Set the header to UFO mode
   setUFOHeader() {
     if (!this.active) {
-      this.titleText.setText(this.headerTexts.UFO);
+      // Use default message if no UFO character is set
+      let ufoCharacterName = "Someone";
+      
+      // Check if there's an active UFO with a character
+      if (this.scene.ufos && this.scene.ufos.length > 0) {
+        const ufo = this.scene.ufos[0];
+        if (ufo && ufo.character) {
+          ufoCharacterName = ufo.character.name;
+        }
+      }
+      
+      // Replace placeholder with character name
+      const ufoMessage = this.headerTexts.UFO.replace("[Character]", ufoCharacterName);
+      this.titleText.setText(ufoMessage);
+      
       // Set an attention color for the UFO warning before starting to blink
       this.startBlinking();
     }
@@ -318,11 +491,12 @@ class IncomingCallDialog {
   
   // Reset the header to default mode
   resetHeader() {
-    if (!this.active) {
+    // Only reset the header if there's no active status message
+    if (!this.active && !this.isStatusMessageActive) {
       this.stopBlinking();
       this.titleText.setText(this.headerTexts.DEFAULT);
       // Explicitly reset the color to default when resetting the header
-      this.titleBox.fillColor = 0x4b6584;
+      this.titleBox.fillColor = COLORS.DEFAULT;
     }
   }
   
@@ -353,13 +527,67 @@ class IncomingCallDialog {
     this.titleText.setText(this.headerTexts.CALL);
     
     // Change the title box color based on whether the character is good or evil
-    const titleBoxColor = character.isEvil ? 0xC70039 : 0x2E8B57; // Crimson for evil, SeaGreen for good
+    const titleBoxColor = character.isEvil ? COLORS.EVIL_CHARACTER : COLORS.GOOD_CHARACTER;
     this.titleBox.fillColor = titleBoxColor;
     
     // Store the current game state and set it to PAUSED
     this.previousGameState = this.scene.gameState;
+    
+    // Stop block physics movement by saving current velocities and setting them to zero
+    // This prevents blocks from having unexpected movement when dialog opens
+    if (this.scene.scopeBlockInstances && this.scene.scopeBlockInstances.length > 0) {
+      this.scene.scopeBlockInstances.forEach(block => {
+        if (block && block.sprite && block.sprite.body) {
+          // Save current velocity for restoration later
+          block.sprite._savedVelocityX = block.sprite.body.velocity.x;
+          block.sprite._savedVelocityY = block.sprite.body.velocity.y;
+          // Set velocity to zero
+          block.sprite.body.velocity.x = 0;
+          block.sprite.body.velocity.y = 0;
+          // Also prevent any bouncing or odd physics interactions
+          block.sprite.body.bounce.set(0);
+        }
+        
+        // Also handle broken pieces
+        if (block.broken) {
+          if (block.leftPiece && block.leftPiece.body) {
+            block.leftPiece._savedVelocityX = block.leftPiece.body.velocity.x;
+            block.leftPiece._savedVelocityY = block.leftPiece.body.velocity.y;
+            block.leftPiece.body.velocity.x = 0;
+            block.leftPiece.body.velocity.y = 0;
+            block.leftPiece.body.bounce.set(0);
+          }
+          if (block.rightPiece && block.rightPiece.body) {
+            block.rightPiece._savedVelocityX = block.rightPiece.body.velocity.x;
+            block.rightPiece._savedVelocityY = block.rightPiece.body.velocity.y;
+            block.rightPiece.body.velocity.x = 0;
+            block.rightPiece.body.velocity.y = 0;
+            block.rightPiece.body.bounce.set(0);
+          }
+        }
+      });
+    }
+    
+    // Now set the game state to PAUSED
     this.scene.gameState = GAME_STATES.PAUSED;
     console.log('Game state changed to PAUSED due to incoming call');
+    
+    // Remove all bugs from the playable area
+    if (this.scene.bugs && this.scene.bugs.length > 0) {
+      console.log(`Removing ${this.scene.bugs.length} bugs due to dialogue opening`);
+      
+      // Loop through bugs array and destroy each bug
+      for (let i = this.scene.bugs.length - 1; i >= 0; i--) {
+        const bug = this.scene.bugs[i];
+        if (bug && bug.sprite) {
+          // Just destroy the bug without showing explosion effect
+          bug.sprite.destroy();
+        }
+      }
+      
+      // Clear the bugs array
+      this.scene.bugs = [];
+    }
     
     // Pause the incoming call timer when the board is activated
     if (this.scene.incomingCallTimer && !this.scene.incomingCallTimer.paused) {
@@ -454,16 +682,62 @@ class IncomingCallDialog {
     this.weaponLockActive = false;
     this._blockBeingCreated = false; // Reset block creation flag
     
+    // Don't reset status message flag here, as that could interrupt active effects
+    // Status messages should expire on their own based on their timers
+    
+    // Restore block velocities if they were saved
+    if (this.scene.scopeBlockInstances && this.scene.scopeBlockInstances.length > 0) {
+      this.scene.scopeBlockInstances.forEach(block => {
+        if (block && block.sprite && block.sprite.body) {
+          // Only restore if there are saved velocities
+          if (block.sprite._savedVelocityX !== undefined) {
+            block.sprite.body.velocity.x = block.sprite._savedVelocityX;
+            block.sprite._savedVelocityX = undefined;
+          }
+          if (block.sprite._savedVelocityY !== undefined) {
+            block.sprite.body.velocity.y = block.sprite._savedVelocityY;
+            block.sprite._savedVelocityY = undefined;
+          }
+        }
+        
+        // Also handle broken pieces
+        if (block.broken) {
+          if (block.leftPiece && block.leftPiece.body) {
+            if (block.leftPiece._savedVelocityX !== undefined) {
+              block.leftPiece.body.velocity.x = block.leftPiece._savedVelocityX;
+              block.leftPiece._savedVelocityX = undefined;
+            }
+            if (block.leftPiece._savedVelocityY !== undefined) {
+              block.leftPiece.body.velocity.y = block.leftPiece._savedVelocityY;
+              block.leftPiece._savedVelocityY = undefined;
+            }
+          }
+          if (block.rightPiece && block.rightPiece.body) {
+            if (block.rightPiece._savedVelocityX !== undefined) {
+              block.rightPiece.body.velocity.x = block.rightPiece._savedVelocityX;
+              block.rightPiece._savedVelocityX = undefined;
+            }
+            if (block.rightPiece._savedVelocityY !== undefined) {
+              block.rightPiece.body.velocity.y = block.rightPiece._savedVelocityY;
+              block.rightPiece._savedVelocityY = undefined;
+            }
+          }
+        }
+      });
+    }
+    
     // Show only the header instead of hiding the entire UI
     this.showHeaderOnly();
     
     // Stop any blinking
     this.stopBlinking();
     
-    // Reset title text to default
-    this.titleText.setText(this.headerTexts.DEFAULT);
-    // Explicitly set the default color
-    this.titleBox.fillColor = 0x4b6584;
+    // Reset title text to default only if no status message is active
+    if (!this.isStatusMessageActive) {
+      this.titleText.setText(this.headerTexts.DEFAULT);
+      // Explicitly set the default color
+      this.titleBox.fillColor = COLORS.DEFAULT;
+    }
     
     // Restore the previous game state if it exists, otherwise set it to PLAYING
     if (this.previousGameState) {
@@ -526,11 +800,11 @@ class IncomingCallDialog {
       
       // Blink every blinkInterval frames
       if (this.blinkTimer % this.blinkInterval === 0) {
-        // Toggle between normal color and attention color
-        if (this.titleBox.fillColor === 0x4b6584) {
-          this.titleBox.fillColor = 0xe74c3c; // Attention color (red)
+        // Toggle between default and blink colors
+        if (this.titleBox.fillColor === this.defaultColor) {
+          this.titleBox.fillColor = this.blinkColor;
         } else {
-          this.titleBox.fillColor = 0x4b6584; // Default color
+          this.titleBox.fillColor = this.defaultColor;
         }
       }
     }
@@ -594,50 +868,20 @@ class IncomingCallDialog {
         const lockDuration = this.weaponLockDuration;
         console.log('Weapon locked for ' + lockDuration + ' seconds');
         
-        // Create a visual timer display to show when weapon will be unlocked
-        const timerDisplay = this.scene.add.text(
-          this.scene.cameras.main.width / 2,
-          50,
-          'WEAPON LOCKED: ' + lockDuration + 's',
-          {
-            font: '20px Arial',
-            fill: '#FF0000',
-            stroke: '#000000',
-            strokeThickness: 3,
-            align: 'center'
-          }
-        );
-        timerDisplay.setOrigin(0.5, 0);
-        timerDisplay.setDepth(1000);
-        
-        // Define an update function for the timer
-        let countdown = lockDuration;
-        const updateTimer = () => {
-          countdown--;
-          timerDisplay.setText('WEAPON LOCKED: ' + countdown + 's');
-          
-          // Check if countdown has reached zero
-          if (countdown <= 0) {
+        // Use the centralized status message display
+        this.showStatusMessage({
+          mainMessage: 'DON\'T KNOW WHAT TO DO: ' + lockDuration + 's',
+          timerMessage: 'COMMIT LOCKED: {duration}s',
+          duration: lockDuration,
+          completionMessage: 'COMMIT UNLOCKED!',
+          headerColor: COLORS.WARNING, // Orange color for speed effect
+          completionColor: COLORS.SUCCESS, // Green color for completion
+          onComplete: () => {
             // Unlock the weapon
             this.scene.playerCanShoot = true;
             this.weaponLockActive = false;
-            
-            // Display an unlocked message briefly
-            timerDisplay.setText('WEAPON UNLOCKED!');
-            timerDisplay.setFill('#00FF00');
-            
-            // Remove the timer display after a brief delay
-            this.scene.time.delayedCall(1000, () => {
-              timerDisplay.destroy();
-            });
-          } else {
-            // Continue the countdown
-            this.scene.time.delayedCall(1000, updateTimer);
           }
-        };
-        
-        // Start the countdown immediately
-        updateTimer();
+        });
         break;
         
       case 'addXXLBlock':
@@ -651,6 +895,223 @@ class IncomingCallDialog {
           // Clear the flag after a short delay
           this.scene.time.delayedCall(500, () => {
             this._blockBeingCreated = false;
+          });
+        }
+        break;
+        
+      // New effects for the Manager character
+      case 'speedupGame':
+        // Speed up the game for a limited time
+        if (this.scene) {
+          console.log('Speeding up the game');
+          
+          // Store original speed
+          const originalSpeed = this.scene.groupSpeed;
+          
+          // Speed up the game
+          this.gameSpeedActive = true;
+          this.scene.groupSpeed *= this.gameSpeedFactor;
+          
+          // Use the centralized status message display
+          this.showStatusMessage({
+            mainMessage: `CEO'S EYES ON YOU!`,
+            timerMessage: '{duration}s',
+            duration: this.gameSpeedDuration,
+            completionMessage: 'CEO FORGOT YOUR NAME!',
+            headerColor: COLORS.WARNING, // Orange color for speed effect
+            completionColor: COLORS.SUCCESS, // Green color for completion
+            onComplete: () => {
+              // Restore original speed
+              this.scene.groupSpeed = originalSpeed;
+              this.gameSpeedActive = false;
+            }
+          });
+        }
+        break;
+        
+      case 'unstableAim':
+        // Replace with new effect: randomize bullet trajectory
+        if (this.scene) {
+          console.log('Activating randomized bullet trajectory effect');
+          
+          try {
+            // Store the original shoot function
+            if (!this.scene._originalShoot) {
+              this.scene._originalShoot = this.scene.shoot;
+            }
+            
+            // Define the effect duration
+            const effectDuration = this.unstableAimDuration; // Use the property from class
+            
+            // Set the effect as active
+            this.unstableAimActive = true;
+            
+            // Override the shoot function with one that randomizes trajectory
+            this.scene.shoot = () => {
+              if (this.scene.playerCanShoot && !this.scene.reloading) {
+                // Get a bullet from the bullet pool or create a new one
+                const bullet = this.scene.bullets.get();
+                if (bullet) {
+                  // Generate a random angle between -30 and 30 degrees
+                  const randomAngle = Phaser.Math.Between(-30, 30);
+                  
+                  // Need to explicitly create a bullet texture
+                  if (!this.scene.textures.exists('bullet')) {
+                    const graphics = this.scene.add.graphics();
+                    graphics.fillStyle(0xFFFF00, 1); // BULLET_COLOR from constants
+                    graphics.fillRect(0, 0, 5, 10); // BULLET_WIDTH, BULLET_HEIGHT from constants
+                    graphics.generateTexture('bullet', 5, 10);
+                    graphics.destroy();
+                  }
+                  
+                  // Properly set up the bullet
+                  bullet.setActive(true);
+                  bullet.setVisible(true);
+                  bullet.setTexture('bullet');
+                  
+                  // Position the bullet at the player's position
+                  bullet.setPosition(this.scene.player.x + 15, this.scene.player.y - 20);
+                  
+                  // Convert to radians and adjust the angle for upward movement
+                  const angleRadians = Phaser.Math.DegToRad(270 + randomAngle);
+                  
+                  // Set the bullet velocity based on the random angle
+                  // Using trigonometry to calculate x and y components
+                  const speed = 400; // Standard bullet speed
+                  bullet.setVelocity(
+                    Math.cos(angleRadians) * speed,
+                    Math.sin(angleRadians) * speed
+                  );
+                  
+                  // Update bullet count if bullet limit is active
+                  if (this.bulletLimitActive) {
+                    this.scene.bulletCount--;
+                    if (this.scene.ammoDisplay) {
+                      this.scene.ammoDisplay.setText(`AMMO: ${this.scene.bulletCount}/${this.bulletLimitAmount}`);
+                    }
+                    
+                    // Check if we're out of ammo
+                    if (this.scene.bulletCount === 0 && this.startReload) {
+                      this.startReload();
+                    }
+                  }
+                }
+              }
+            };
+            
+            // Use the centralized status message display
+            this.showStatusMessage({
+              mainMessage: 'FOCUS THE MINDSET!',
+              timerMessage: '{duration}s',
+              duration: effectDuration,
+              completionMessage: 'MINDSET STABILIZED!',
+              headerColor: COLORS.DANGER, // Darker red for focus warning
+              completionColor: COLORS.SUCCESS, // Green color for completion
+              onComplete: () => {
+                // Restore original shoot function
+                if (this.scene && this.scene._originalShoot) {
+                  this.scene.shoot = this.scene._originalShoot;
+                  this.scene._originalShoot = null;
+                }
+                
+                // Set the effect as inactive
+                this.unstableAimActive = false;
+              }
+            });
+          } catch (error) {
+            console.error('Error in randomized trajectory effect:', error);
+            // Try to restore original shoot function if there was an error
+            if (this.scene && this.scene._originalShoot) {
+              this.scene.shoot = this.scene._originalShoot;
+              this.scene._originalShoot = null;
+            }
+            // Make sure to reset the flag even in case of error
+            this.unstableAimActive = false;
+          }
+        }
+        break;
+      
+      case 'limitBullets':
+        // Limit bullets and implement reload mechanism
+        if (this.scene) {
+          console.log('Limiting bullets with reload mechanism');
+          
+          // Set bullet limit flags
+          this.bulletLimitActive = true;
+          this.scene.bulletLimit = this.bulletLimitAmount;
+          this.scene.bulletCount = this.bulletLimitAmount; // Start with full ammo
+          this.scene.reloading = false;
+          this.bulletLimitReloadTime = 3; // 3 seconds to reload
+          
+          // Use centralized status message for main notification
+          this.showStatusMessage({
+            mainMessage: `YOU HAVE ${this.bulletLimitAmount} COMMITS BEFORE BUFFERING!`,
+            duration: 2, // Short duration, will auto-fade
+            headerColor: COLORS.WARNING // Orange/amber color for ammo limit warning
+          });
+          
+          // Setup reload functionality with space key
+          const originalShootFunction = this.scene.shoot;
+          
+          // Override the shoot function
+          this.scene.shoot = () => {
+            if (this.scene.reloading) {
+              console.log('Cannot shoot while reloading');
+              return;
+            }
+            
+            if (this.scene.bulletCount > 0) {
+              // Shoot a bullet using the original function
+              originalShootFunction.call(this.scene);
+              
+              // Decrement bullet count
+              this.scene.bulletCount--;
+              
+              // Check if we're out of ammo
+              if (this.scene.bulletCount === 0) {
+                // Start automatic reload
+                this.startReload();
+              }
+            }
+          };
+          
+          // Function to start the reload process
+          this.startReload = () => {
+            if (this.bulletLimitActive && !this.scene.reloading) {
+              // Start reload process
+              this.scene.reloading = true;
+              
+              // Show reloading message with timer
+              this.showStatusMessage({
+                mainMessage: `BUFFERING...`,
+                timerMessage: `{duration}s`,
+                duration: this.bulletLimitReloadTime,
+                completionMessage: 'BUFFERING COMPLETE!',
+                headerColor: COLORS.WARNING, // Orange/amber color for reload
+                completionColor: COLORS.SUCCESS, // Green for completion
+                onComplete: () => {
+                  // Reload complete
+                  this.scene.bulletCount = this.bulletLimitAmount;
+                  this.scene.reloading = false;
+                }
+              });
+            }
+          };
+          
+          // Use a delayed call instead of visible timer to track effect duration
+          this.scene.time.delayedCall(this.bulletLimitDuration * 1000, () => {
+            // Remove bullet limit
+            this.bulletLimitActive = false;
+            
+            // Restore original shoot function
+            this.scene.shoot = originalShootFunction;
+            
+            // Show effect ended notification
+            this.showStatusMessage({
+              mainMessage: 'ADSL RESTORED!',
+              headerColor: COLORS.SUCCESS, // Green color for positive effect
+              duration: 2 // Will auto-fade
+            });
           });
         }
         break;
@@ -784,15 +1245,6 @@ class IncomingCallDialog {
       default:
         console.log(`Unknown effect: ${effectName}`);
         break;
-    }
-  }
-  
-  // Method to apply the current effect - keep this method for compatibility
-  applyEffect() {
-    // This method is kept for compatibility but should now call applyEffectAfterClose
-    console.log(`Calling applyEffect() has been deprecated - use applyEffectAfterClose() instead`);
-    if (this.currentEffect) {
-      this.applyEffectAfterClose(this.currentEffect);
     }
   }
   
@@ -951,49 +1403,26 @@ class IncomingCallDialog {
     this.titleText.setText(this.headerTexts.DEFAULT);
     this.stopBlinking();
     // Ensure color is reset to default
-    this.titleBox.fillColor = 0x4b6584;
+    this.titleBox.fillColor = COLORS.DEFAULT;
   }
   
   // Other methods like update(), deactivate(), etc. with the same logic but renamed references
   
   // Set a custom blinking header with specified message and duration
-  setCustomBlinkingHeader(message, duration = 3000, color = 0xFF0000) {
+  setCustomBlinkingHeader(message, duration = 3000, color = COLORS.DANGER) {
     if (!this.active) {
       this.titleText.setText(message);
       // Set custom blinking parameters
       this.blinkDuration = duration / 16; // Convert to frames (assuming 60fps with 16ms per frame)
       this.blinkInterval = 10; // Blink every 10 frames
-      this.customBlinkColor = color;
+      this.defaultColor = COLORS.DEFAULT;
+      this.blinkColor = color;
       this.startBlinking();
       
       // Set a timer to reset the header after duration
       this.scene.time.delayedCall(duration, () => {
         this.resetHeader();
       });
-    }
-  }
-  
-  // Update the blinking animation for the title
-  updateBlinking() {
-    if (this.isBlinking) {
-      this.blinkTimer++;
-      
-      if (this.blinkTimer >= this.blinkDuration) {
-        // Stop blinking after duration
-        this.stopBlinking();
-        return;
-      }
-      
-      // Blink every blinkInterval frames
-      if (this.blinkTimer % this.blinkInterval === 0) {
-        // Toggle between normal color and attention color
-        if (this.titleBox.fillColor === 0x4b6584) {
-          // Use custom color if defined, otherwise use default attention color
-          this.titleBox.fillColor = this.customBlinkColor || 0xe74c3c; // Attention color
-        } else {
-          this.titleBox.fillColor = 0x4b6584; // Default color
-        }
-      }
     }
   }
   
@@ -1010,10 +1439,12 @@ class IncomingCallDialog {
     // Stop any blinking
     this.stopBlinking();
     
-    // Reset title text to default
-    this.titleText.setText(this.headerTexts.DEFAULT);
-    // Explicitly set the default color
-    this.titleBox.fillColor = 0x4b6584;
+    // Reset title text to default only if no status message is active
+    if (!this.isStatusMessageActive) {
+      this.titleText.setText(this.headerTexts.DEFAULT);
+      // Explicitly set the default color
+      this.titleBox.fillColor = COLORS.DEFAULT;
+    }
     
     // Restore the previous game state if it exists, otherwise set it to PLAYING
     if (this.previousGameState) {
@@ -1022,6 +1453,47 @@ class IncomingCallDialog {
     } else {
       this.scene.gameState = GAME_STATES.PLAYING;
       console.log('Game state set back to PLAYING');
+    }
+    
+    // Restore block velocities if they were saved
+    if (this.scene.scopeBlockInstances && this.scene.scopeBlockInstances.length > 0) {
+      this.scene.scopeBlockInstances.forEach(block => {
+        if (block && block.sprite && block.sprite.body) {
+          // Only restore if there are saved velocities
+          if (block.sprite._savedVelocityX !== undefined) {
+            block.sprite.body.velocity.x = block.sprite._savedVelocityX;
+            block.sprite._savedVelocityX = undefined;
+          }
+          if (block.sprite._savedVelocityY !== undefined) {
+            block.sprite.body.velocity.y = block.sprite._savedVelocityY;
+            block.sprite._savedVelocityY = undefined;
+          }
+        }
+        
+        // Also handle broken pieces
+        if (block.broken) {
+          if (block.leftPiece && block.leftPiece.body) {
+            if (block.leftPiece._savedVelocityX !== undefined) {
+              block.leftPiece.body.velocity.x = block.leftPiece._savedVelocityX;
+              block.leftPiece._savedVelocityX = undefined;
+            }
+            if (block.leftPiece._savedVelocityY !== undefined) {
+              block.leftPiece.body.velocity.y = block.leftPiece._savedVelocityY;
+              block.leftPiece._savedVelocityY = undefined;
+            }
+          }
+          if (block.rightPiece && block.rightPiece.body) {
+            if (block.rightPiece._savedVelocityX !== undefined) {
+              block.rightPiece.body.velocity.x = block.rightPiece._savedVelocityX;
+              block.rightPiece._savedVelocityX = undefined;
+            }
+            if (block.rightPiece._savedVelocityY !== undefined) {
+              block.rightPiece.body.velocity.y = block.rightPiece._savedVelocityY;
+              block.rightPiece._savedVelocityY = undefined;
+            }
+          }
+        }
+      });
     }
     
     // Resume the incoming call timer if it exists and is paused

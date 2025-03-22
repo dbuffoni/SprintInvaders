@@ -100,9 +100,22 @@ export const UFO_SCREEN_TIME = 12000; // Milliseconds the UFO stays inside the s
 
 // Character proportions for incoming calls
 export const CHARACTER_PROPORTIONS = {
-  EVIL: 0.9, // 50% chance for evil character call
-  GOOD: 0.1  // 50% chance for good character call
+  EVIL: 0.9, // 90% chance for evil character call
+  GOOD: 0.1  // 10% chance for good character call
 }; 
+
+// UFO character drop rates for incoming calls
+export const UFO_CHARACTER_DROP_RATES = {
+  EVIL: 0.025, // Higher drop chance for evil characters
+  GOOD: 0.002  // Lower drop chance for good characters
+};
+
+// Character types by category
+export const CHARACTER_TYPES = {
+ // EVIL: ['businessAnalyst', 'manager'],
+  EVIL: ['manager'],
+  GOOD: ['stageur']
+};
 
 // Simple Bug constants
 export const SIMPLE_BUG_SIZE = 6; // Size of the bug triangle
