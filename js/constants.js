@@ -112,8 +112,7 @@ export const UFO_CHARACTER_DROP_RATES = {
 
 // Character types by category
 export const CHARACTER_TYPES = {
- // EVIL: ['businessAnalyst', 'manager'],
-  EVIL: ['manager'],
+  EVIL: ['businessAnalyst', 'manager'],
   GOOD: ['stageur']
 };
 
