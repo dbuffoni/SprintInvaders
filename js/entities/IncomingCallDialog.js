@@ -1,17 +1,68 @@
 // Import constants and functions
-import { CANVAS_WIDTH, PLAYABLE_HEIGHT, INCOMING_CALL_DIALOG_HEIGHT, GAME_STATES, BLOCK_WIDTH, BLOCK_HEIGHT, START_Y, HEADER_HEIGHT, BLOCK_COLORS, BULLET_SPEED, SCENES } from '../constants.js';
+import { 
+  CANVAS_WIDTH, 
+  PLAYABLE_HEIGHT, 
+  INCOMING_CALL_DIALOG_HEIGHT, 
+  GAME_STATES, 
+  BLOCK_WIDTH, 
+  BLOCK_HEIGHT, 
+  START_Y, 
+  HEADER_HEIGHT, 
+  BLOCK_COLORS, 
+  BULLET_SPEED, 
+  SCENES,
+  // New effect constants
+  COLORS,
+  LOCK_WEAPON_DURATION,
+  XXL_BLOCK_FLAG_CLEAR_DELAY,
+  GAME_SPEED_FACTOR,
+  GAME_SPEED_DURATION,
+  UNSTABLE_AIM_DURATION,
+  UNSTABLE_AIM_ANGLE_MIN,
+  UNSTABLE_AIM_ANGLE_MAX,
+  UNSTABLE_AIM_BASE_ANGLE,
+  UNSTABLE_AIM_BULLET_SPEED,
+  LIMIT_BULLETS_DURATION,
+  BULLET_SLOWDOWN_FACTOR,
+  RETURNING_BULLET_CHANCE,
+  RETURN_DELAY_MIN,
+  RETURN_DELAY_MAX,
+  RETURNING_BULLET_SPEED_MIN,
+  RETURNING_BULLET_SPEED_MAX,
+  RETURNING_BULLET_DIRECTION_CHANGE_CHANCE,
+  RETURNING_BULLET_ANGLE_ADJUSTMENT,
+  RETURNING_BULLET_SLOW_SPEED_FACTOR,
+  RETURNING_BULLET_MIN_ALLOWED_ANGLE,
+  RETURNING_BULLET_MAX_ALLOWED_ANGLE,
+  RETURNING_BULLET_VELOCITY_CHECK_DELAY,
+  RETURNING_BULLET_MIN_VELOCITY,
+  RETURNING_BULLET_FORCED_SPEED_FACTOR,
+  RETURNING_BULLET_UPDATE_INTERVAL,
+  RETURNING_BULLET_EXPLOSION_RADIUS,
+  RETURNING_BULLET_EXPLOSION_PARTICLES,
+  RETURNING_BULLET_EXPLOSION_DURATION,
+  MAX_COFFEE_CUPS,
+  COFFEE_NOTIFICATION_Y,
+  COFFEE_NOTIFICATION_DURATION,
+  COFFEE_NOTIFICATION_END_Y,
+  CLEAN_CODE_MAX_BLOCKS,
+  CODE_NOTIFICATION_Y,
+  CODE_NOTIFICATION_DURATION,
+  CODE_NOTIFICATION_END_Y,
+  BUG_FIX_NOTIFICATION_Y,
+  BUG_FIX_NOTIFICATION_DURATION,
+  BUG_FIX_NOTIFICATION_END_Y
+} from '../constants.js';
 import { getCharacter } from '../characters.js';
 import ScopeBlock from './ScopeBlock.js';
 
-// Define color constants for consistent usage throughout the class
-const COLORS = {
-  DEFAULT: 0x4b6584,         // Default header background
-  ATTENTION: 0xe74c3c,       // Red attention color
-  SUCCESS: 0x004d00,         // Green success color
-  WARNING: 0xFF9900,         // Orange warning color
-  DANGER: 0xFF0000,          // Red danger color
-  EVIL_CHARACTER: 0xC70039,  // Crimson for evil characters
-  GOOD_CHARACTER: 0x2E8B57   // SeaGreen for good characters
+// Define the notification text style locally since it's a UI styling concern
+const NOTIFICATION_TEXT_STYLE = {
+  font: '22px Arial',
+  fill: '#00FF00',
+  stroke: '#000000',
+  strokeThickness: 3,
+  align: 'center'
 };
 
 class IncomingCallDialog {
@@ -94,7 +145,6 @@ class IncomingCallDialog {
       timerMessage, // Timer message format (will have seconds replaced)
       duration = 0, // Duration in seconds for the effect (0 for no timer) 
       completionMessage, // Message to show when timer completes
-      headerColor = COLORS.DANGER, // Default color for header during effect 
       completionColor = COLORS.SUCCESS, // Color for the header when effect completes
       onUpdate, // Callback to run each second
       onComplete // Callback to run when timer completes
@@ -109,7 +159,8 @@ class IncomingCallDialog {
       // Set the header text and start blinking
       this.titleText.setText(mainMessage);
       this.defaultColor = originalHeaderColor;
-      this.blinkColor = headerColor;
+      // Always use DANGER color for blinking during effects
+      this.blinkColor = COLORS.DANGER;
       this.blinkDuration = (duration > 0) ? (duration * 60) : 240; // 4 seconds at 60fps if no duration
       this.blinkInterval = 10; // Blink every 10 frames
       this.startBlinking();
@@ -158,7 +209,7 @@ class IncomingCallDialog {
             this.titleBox.fillColor = completionColor;
             
             // Set a timer to reset the header after a delay
-            this.scene.time.delayedCall(1500, () => {
+            this.scene.time.delayedCall(2500, () => {
               // Restore original header text and color
               this.titleText.setText(originalHeaderText);
               this.titleBox.fillColor = originalHeaderColor;
@@ -301,7 +352,7 @@ class IncomingCallDialog {
     // Create text for the prompt
     this.promptText = this.scene.add.text(
       20, 
-      INCOMING_CALL_DIALOG_HEIGHT - 30, 
+      contentTop + 135, 
       "", 
       { 
         font: '14px Arial', 
@@ -759,24 +810,27 @@ class IncomingCallDialog {
   
   // Basic update method to handle the dialog's logic
   update() {
-    // If the dialog is active, update it
-    if (this.active) {
-      // Check if visually active
-      const isVisuallyActive = this.mainContainer && 
-                            this.mainContainer.visible && 
-                            this.mainContainer.y < PLAYABLE_HEIGHT;
-      
-      // If there's a state mismatch (active but not visually active), force deactivate
-      if (!isVisuallyActive) {
-        console.log('Detected IncomingCallDialog state mismatch in update loop. Forcing deactivation.');
-        this.forceDeactivate();
-        return;
+    // Check if either the dialog is active OR there's an active status message
+    if (this.active || this.isStatusMessageActive) {
+      // Check if visually active (only for active dialog, not for status messages)
+      if (this.active) {
+        const isVisuallyActive = this.mainContainer && 
+                              this.mainContainer.visible && 
+                              this.mainContainer.y < PLAYABLE_HEIGHT;
+        
+        // If there's a state mismatch (active but not visually active), force deactivate
+        if (!isVisuallyActive) {
+          console.log('Detected IncomingCallDialog state mismatch in update loop. Forcing deactivation.');
+          this.forceDeactivate();
+          return;
+        }
+        
+        // Update effects
+        this.updateEffects();
       }
       
-      // Update effects
-      this.updateEffects();
-      
-      // Update blinking animation
+      // Update blinking animation regardless of dialog active state
+      // This allows status messages to blink even when dialog is inactive
       this.updateBlinking();
     }
   }
@@ -865,7 +919,7 @@ class IncomingCallDialog {
         // Implement weapon lock effect
         this.scene.playerCanShoot = false;
         this.weaponLockActive = true;
-        const lockDuration = this.weaponLockDuration;
+        const lockDuration = LOCK_WEAPON_DURATION;
         console.log('Weapon locked for ' + lockDuration + ' seconds');
         
         // Use the centralized status message display
@@ -874,7 +928,6 @@ class IncomingCallDialog {
           timerMessage: 'COMMIT LOCKED: {duration}s',
           duration: lockDuration,
           completionMessage: 'COMMIT UNLOCKED!',
-          headerColor: COLORS.WARNING, // Orange color for speed effect
           completionColor: COLORS.SUCCESS, // Green color for completion
           onComplete: () => {
             // Unlock the weapon
@@ -893,7 +946,7 @@ class IncomingCallDialog {
           this.scene.createBlocks('XXL',1);
           
           // Clear the flag after a short delay
-          this.scene.time.delayedCall(500, () => {
+          this.scene.time.delayedCall(XXL_BLOCK_FLAG_CLEAR_DELAY, () => {
             this._blockBeingCreated = false;
           });
         }
@@ -910,15 +963,14 @@ class IncomingCallDialog {
           
           // Speed up the game
           this.gameSpeedActive = true;
-          this.scene.groupSpeed *= this.gameSpeedFactor;
+          this.scene.groupSpeed *= GAME_SPEED_FACTOR;
           
           // Use the centralized status message display
           this.showStatusMessage({
             mainMessage: `CEO'S EYES ON YOU!`,
             timerMessage: '{duration}s',
-            duration: this.gameSpeedDuration,
+            duration: GAME_SPEED_DURATION,
             completionMessage: 'CEO FORGOT YOUR NAME!',
-            headerColor: COLORS.WARNING, // Orange color for speed effect
             completionColor: COLORS.SUCCESS, // Green color for completion
             onComplete: () => {
               // Restore original speed
@@ -941,7 +993,7 @@ class IncomingCallDialog {
             }
             
             // Define the effect duration
-            const effectDuration = this.unstableAimDuration; // Use the property from class
+            const effectDuration = UNSTABLE_AIM_DURATION;
             
             // Set the effect as active
             this.unstableAimActive = true;
@@ -952,8 +1004,8 @@ class IncomingCallDialog {
                 // Get a bullet from the bullet pool or create a new one
                 const bullet = this.scene.bullets.get();
                 if (bullet) {
-                  // Generate a random angle between -30 and 30 degrees
-                  const randomAngle = Phaser.Math.Between(-30, 30);
+                  // Generate a random angle between min and max degrees
+                  const randomAngle = Phaser.Math.Between(UNSTABLE_AIM_ANGLE_MIN, UNSTABLE_AIM_ANGLE_MAX);
                   
                   // Need to explicitly create a bullet texture
                   if (!this.scene.textures.exists('bullet')) {
@@ -973,11 +1025,11 @@ class IncomingCallDialog {
                   bullet.setPosition(this.scene.player.x + 15, this.scene.player.y - 20);
                   
                   // Convert to radians and adjust the angle for upward movement
-                  const angleRadians = Phaser.Math.DegToRad(270 + randomAngle);
+                  const angleRadians = Phaser.Math.DegToRad(UNSTABLE_AIM_BASE_ANGLE + randomAngle);
                   
                   // Set the bullet velocity based on the random angle
                   // Using trigonometry to calculate x and y components
-                  const speed = 400; // Standard bullet speed
+                  const speed = UNSTABLE_AIM_BULLET_SPEED;
                   bullet.setVelocity(
                     Math.cos(angleRadians) * speed,
                     Math.sin(angleRadians) * speed
@@ -1005,7 +1057,6 @@ class IncomingCallDialog {
               timerMessage: '{duration}s',
               duration: effectDuration,
               completionMessage: 'MINDSET STABILIZED!',
-              headerColor: COLORS.DANGER, // Darker red for focus warning
               completionColor: COLORS.SUCCESS, // Green color for completion
               onComplete: () => {
                 // Restore original shoot function
@@ -1036,12 +1087,8 @@ class IncomingCallDialog {
         if (this.scene) {
           console.log('Activating refactored limitBullets effect');
           
-          // Define constants for the new effect
-          const EFFECT_DURATION = 15; // 15 seconds as requested
-          const BULLET_SLOWDOWN_FACTOR = 0.2; // Bullets are 60% of normal speed
-          const RETURNING_BULLET_CHANCE = 0.3; // 30% chance to return
-          const RETURN_DELAY_MIN = 0.5; // Min seconds before a bullet returns
-          const RETURN_DELAY_MAX = 2; // Max seconds before a bullet returns
+          // Define constants for the new effect using imported constants
+          const EFFECT_DURATION = LIMIT_BULLETS_DURATION;
           
           // Set flag to prevent incoming calls during this effect
           this.bulletLimitActive = true;
@@ -1052,7 +1099,6 @@ class IncomingCallDialog {
             timerMessage: `{duration}s`,
             duration: EFFECT_DURATION,
             completionMessage: 'CONNECTION RESTORED!',
-            headerColor: COLORS.WARNING, // Orange/amber color for warning
             completionColor: COLORS.SUCCESS, // Green for completion
           });
           
@@ -1095,7 +1141,10 @@ class IncomingCallDialog {
                     
                     // Set velocity based on angle (with some randomness in speed)
                     // Slower speed for easier dodging (60-80% of normal speed)
-                    const returnSpeed = originalBulletSpeed * Phaser.Math.FloatBetween(0.6, 0.8);
+                    const returnSpeed = originalBulletSpeed * Phaser.Math.FloatBetween(
+                      RETURNING_BULLET_SPEED_MIN, 
+                      RETURNING_BULLET_SPEED_MAX
+                    );
                     // Log velocity values for debugging
                     console.log(`Setting return velocity: angle=${randomAngle}, speed=${returnSpeed}`);
                     bullet.sprite.setVelocity(
@@ -1132,20 +1181,20 @@ class IncomingCallDialog {
                               speed: { min: 30, max: 80 },
                               angle: { min: 0, max: 360 },
                               scale: { start: 0.4, end: 0 },
-                              lifespan: 500, // 500ms explosion duration
+                              lifespan: RETURNING_BULLET_EXPLOSION_DURATION,
                               blendMode: 'ADD',
                               frequency: 0,
-                              quantity: 20 // Number of particles
+                              quantity: RETURNING_BULLET_EXPLOSION_PARTICLES
                             });
                             
                             // Emit particles at the bullet's position
-                            emitter.explode(20, bulletSprite.x, bulletSprite.y);
+                            emitter.explode(RETURNING_BULLET_EXPLOSION_PARTICLES, bulletSprite.x, bulletSprite.y);
                             
                             // Create visual indication of explosion
                             const explosionCircle = this.scene.add.circle(
                               bulletSprite.x, 
                               bulletSprite.y,
-                              40, // Explosion radius
+                              RETURNING_BULLET_EXPLOSION_RADIUS,
                               COLORS.DANGER,
                               0.3
                             );
@@ -1155,12 +1204,12 @@ class IncomingCallDialog {
                               targets: explosionCircle,
                               alpha: 0,
                               scale: 1.5,
-                              duration: 500,
+                              duration: RETURNING_BULLET_EXPLOSION_DURATION,
                               onComplete: () => {
                                 explosionCircle.destroy();
                                 
                                 // Destroy particles after their lifespan
-                                this.scene.time.delayedCall(500, () => {
+                                this.scene.time.delayedCall(RETURNING_BULLET_EXPLOSION_DURATION, () => {
                                   particles.destroy();
                                 });
                               }
@@ -1208,19 +1257,19 @@ class IncomingCallDialog {
                       }
                       
                       // Add a delayed check to verify the bullet is actually moving
-                      this.scene.time.delayedCall(500, () => {
+                      this.scene.time.delayedCall(RETURNING_BULLET_VELOCITY_CHECK_DELAY, () => {
                         if (bullet && bullet.sprite && bullet.sprite.active && bullet.sprite.body) {
                           const vx = bullet.sprite.body.velocity.x;
                           const vy = bullet.sprite.body.velocity.y;
-                          console.log(`Bullet velocity check after 500ms: vx=${vx}, vy=${vy}`);
+                          console.log(`Bullet velocity check after ${RETURNING_BULLET_VELOCITY_CHECK_DELAY}ms: vx=${vx}, vy=${vy}`);
                           
                           // If bullet velocity is too low, force it to move again
-                          if (Math.abs(vx) < 10 && Math.abs(vy) < 10) {
+                          if (Math.abs(vx) < RETURNING_BULLET_MIN_VELOCITY && Math.abs(vy) < RETURNING_BULLET_MIN_VELOCITY) {
                             console.log("Bullet not moving! Forcing velocity again with direct approach.");
                             
                             // Force a new downward trajectory with constrained angle
                             const forcedAngle = Math.PI / 2 + Phaser.Math.FloatBetween(-Math.PI/6, Math.PI/6);
-                            const forcedSpeed = returnSpeed * 1.2; // Slightly faster but still manageable
+                            const forcedSpeed = returnSpeed * RETURNING_BULLET_FORCED_SPEED_FACTOR;
                             
                             bullet.sprite.body.setVelocity(
                               Math.cos(forcedAngle) * forcedSpeed,
@@ -1266,13 +1315,12 @@ class IncomingCallDialog {
                     this.scene.returningBulletTrackers.splice(i, 1);
                     console.log("Bullet reached bottom border and was destroyed");
                   }
-                  // Randomly change direction occasionally (10% chance per update)
-                  else if (Math.random() < 0.05) {
+                  // Randomly change direction occasionally
+                  else if (Math.random() < RETURNING_BULLET_DIRECTION_CHANGE_CHANCE) {
                     // Apply a small random angle adjustment
-                    // Smaller angle adjustment (+/- 15 degrees instead of +/- 17 degrees)
-                    const randomAngle = Phaser.Math.FloatBetween(-0.25, 0.25);
+                    const randomAngle = Phaser.Math.FloatBetween(-RETURNING_BULLET_ANGLE_ADJUSTMENT, RETURNING_BULLET_ANGLE_ADJUSTMENT);
                     // Slower speed for random direction changes
-                    const speed = originalBulletSpeed * 0.6;
+                    const speed = originalBulletSpeed * RETURNING_BULLET_SLOW_SPEED_FACTOR;
                     const currentVelX = tracker.sprite.body.velocity.x;
                     const currentVelY = tracker.sprite.body.velocity.y;
                     
@@ -1283,14 +1331,10 @@ class IncomingCallDialog {
                     let newAngle = currentAngle + randomAngle;
                     
                     // Enforce angle limits: must stay between 60 and 120 degrees (down ±30°)
-                    const minAllowedAngle = Math.PI / 3; // 60 degrees
-                    const maxAllowedAngle = 2 * Math.PI / 3; // 120 degrees
-                    
-                    // If outside allowed range, clamp it
-                    if (newAngle < minAllowedAngle) {
-                      newAngle = minAllowedAngle;
-                    } else if (newAngle > maxAllowedAngle) {
-                      newAngle = maxAllowedAngle;
+                    if (newAngle < RETURNING_BULLET_MIN_ALLOWED_ANGLE) {
+                      newAngle = RETURNING_BULLET_MIN_ALLOWED_ANGLE;
+                    } else if (newAngle > RETURNING_BULLET_MAX_ALLOWED_ANGLE) {
+                      newAngle = RETURNING_BULLET_MAX_ALLOWED_ANGLE;
                     }
                     
                     // Set new velocity based on adjusted angle
@@ -1309,7 +1353,7 @@ class IncomingCallDialog {
             
             // Continue updating if effect is still active
             if (this.bulletLimitActive) {
-              this.scene.time.delayedCall(500, updateReturningBullets);
+              this.scene.time.delayedCall(RETURNING_BULLET_UPDATE_INTERVAL, updateReturningBullets);
             }
           };
           
@@ -1359,21 +1403,15 @@ class IncomingCallDialog {
         // Add a coffee cup (extra life)
         if (this.scene) {
           console.log('Adding coffee cup (extra life)');
-          this.scene.coffeeCups = Math.min(this.scene.coffeeCups + 1, 5); // Max 5 coffee cups
+          this.scene.coffeeCups = Math.min(this.scene.coffeeCups + 1, MAX_COFFEE_CUPS);
           this.scene.updateCoffeeCupsDisplay();
           
           // Show a visual notification
           const coffeeText = this.scene.add.text(
             this.scene.cameras.main.width / 2,
-            100,
+            COFFEE_NOTIFICATION_Y,
             '☕ COFFEE ADDED! ☕',
-            {
-              font: '22px Arial',
-              fill: '#00FF00',
-              stroke: '#000000',
-              strokeThickness: 3,
-              align: 'center'
-            }
+            NOTIFICATION_TEXT_STYLE
           );
           coffeeText.setOrigin(0.5, 0.5);
           coffeeText.setDepth(1000);
@@ -1382,8 +1420,8 @@ class IncomingCallDialog {
           this.scene.tweens.add({
             targets: coffeeText,
             alpha: 0,
-            y: 50,
-            duration: 2000,
+            y: COFFEE_NOTIFICATION_END_Y,
+            duration: COFFEE_NOTIFICATION_DURATION,
             onComplete: () => coffeeText.destroy()
           });
         }
@@ -1398,8 +1436,8 @@ class IncomingCallDialog {
           const smallBlocks = this.scene.scopeBlockInstances.filter(block => 
             block && block.active && block.category === 'S' && !block.hasActiveDependencies());
           
-          // Remove up to 3 small blocks if available
-          const blocksToRemove = Math.min(smallBlocks.length, 3);
+          // Remove up to MAX_CLEAN_CODE_BLOCKS small blocks if available
+          const blocksToRemove = Math.min(smallBlocks.length, CLEAN_CODE_MAX_BLOCKS);
           for (let i = 0; i < blocksToRemove; i++) {
             if (smallBlocks[i]) {
               smallBlocks[i].destroy();
@@ -1409,15 +1447,9 @@ class IncomingCallDialog {
           // Show a visual notification
           const cleanText = this.scene.add.text(
             this.scene.cameras.main.width / 2,
-            100,
+            CODE_NOTIFICATION_Y,
             `CODE CLEANED! REMOVED ${blocksToRemove} BLOCKS`,
-            {
-              font: '22px Arial',
-              fill: '#00FF00',
-              stroke: '#000000',
-              strokeThickness: 3,
-              align: 'center'
-            }
+            NOTIFICATION_TEXT_STYLE
           );
           cleanText.setOrigin(0.5, 0.5);
           cleanText.setDepth(1000);
@@ -1426,8 +1458,8 @@ class IncomingCallDialog {
           this.scene.tweens.add({
             targets: cleanText,
             alpha: 0,
-            y: 50,
-            duration: 2000,
+            y: CODE_NOTIFICATION_END_Y,
+            duration: CODE_NOTIFICATION_DURATION,
             onComplete: () => cleanText.destroy()
           });
         }
@@ -1454,15 +1486,9 @@ class IncomingCallDialog {
               // Show a visual notification
               const bugFixText = this.scene.add.text(
                 this.scene.cameras.main.width / 2,
-                100,
+                BUG_FIX_NOTIFICATION_Y,
                 `BUG FIXED! REMOVED ${targetBlock.category} BLOCK`,
-                {
-                  font: '22px Arial',
-                  fill: '#00FF00',
-                  stroke: '#000000',
-                  strokeThickness: 3,
-                  align: 'center'
-                }
+                NOTIFICATION_TEXT_STYLE
               );
               bugFixText.setOrigin(0.5, 0.5);
               bugFixText.setDepth(1000);
@@ -1471,8 +1497,8 @@ class IncomingCallDialog {
               this.scene.tweens.add({
                 targets: bugFixText,
                 alpha: 0,
-                y: 50,
-                duration: 2000,
+                y: BUG_FIX_NOTIFICATION_END_Y,
+                duration: BUG_FIX_NOTIFICATION_DURATION,
                 onComplete: () => bugFixText.destroy()
               });
             }

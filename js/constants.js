@@ -132,3 +132,73 @@ export const SIMPLE_BUG_GENERATION_CHANCE = {
   'XXL': 0.01 // XXL blocks have the highest chance
 };
 export const SIMPLE_BUG_CHANCE_INCREASE_PER_SPRINT = 0.0002; // Increase in bug generation chance per sprint 
+
+// Colors used for UI elements and effects
+export const COLORS = {
+  SUCCESS: 0x005100,         // Green for success messages
+  WARNING: 0xFFFF00,         // Yellow for warnings
+  DANGER: 0xFF0000,          // Red for danger/errors
+  INFO: 0x1E90FF,            // Blue for information
+  DEFAULT: 0x4b6584,         // Default header background
+  ATTENTION: 0xe74c3c,       // Red attention color
+  EVIL_CHARACTER: 0xC70039,  // Crimson for evil characters
+  GOOD_CHARACTER: 0x2E8B57   // SeaGreen for good characters
+};
+
+// Effect Constants for Various Character Effects
+// ==============================================
+
+// Lock Weapon Effect Constants
+export const LOCK_WEAPON_DURATION = 10; // Duration in seconds for weapon lock effect
+
+// Add XXL Block Effect Constants
+export const XXL_BLOCK_FLAG_CLEAR_DELAY = 500; // Delay to clear the block creation flag (milliseconds)
+
+// Speed Up Game Effect Constants
+export const GAME_SPEED_FACTOR = 1.75; // Factor by which to increase game speed
+export const GAME_SPEED_DURATION = 7; // Duration in seconds for increased game speed
+
+// Unstable Aim Effect Constants
+export const UNSTABLE_AIM_DURATION = 12; // Duration in seconds for unstable aim effect
+export const UNSTABLE_AIM_ANGLE_MIN = -30; // Minimum random angle in degrees
+export const UNSTABLE_AIM_ANGLE_MAX = 30; // Maximum random angle in degrees
+export const UNSTABLE_AIM_BASE_ANGLE = 270; // Base angle for upward movement (degrees)
+export const UNSTABLE_AIM_BULLET_SPEED = 400; // Speed for unstable aim bullets
+
+// Limit Bullets Effect Constants
+export const LIMIT_BULLETS_DURATION = 15; // Duration in seconds for limit bullets effect
+export const BULLET_SLOWDOWN_FACTOR = 0.2; // Factor to slow down bullets
+export const RETURNING_BULLET_CHANCE = 0.3; // Chance that a bullet will return
+export const RETURN_DELAY_MIN = 0.5; // Minimum delay before bullet returns (seconds)
+export const RETURN_DELAY_MAX = 2; // Maximum delay before bullet returns (seconds)
+export const RETURNING_BULLET_SPEED_MIN = 0.6; // Minimum speed factor for returning bullets
+export const RETURNING_BULLET_SPEED_MAX = 0.8; // Maximum speed factor for returning bullets
+export const RETURNING_BULLET_DIRECTION_CHANGE_CHANCE = 0.05; // Chance to randomly change direction
+export const RETURNING_BULLET_ANGLE_ADJUSTMENT = 0.25; // Maximum angle adjustment (radians)
+export const RETURNING_BULLET_SLOW_SPEED_FACTOR = 0.6; // Speed factor for random direction changes
+export const RETURNING_BULLET_MIN_ALLOWED_ANGLE = Math.PI / 3; // Minimum allowed angle (60 degrees)
+export const RETURNING_BULLET_MAX_ALLOWED_ANGLE = 2 * Math.PI / 3; // Maximum allowed angle (120 degrees)
+export const RETURNING_BULLET_VELOCITY_CHECK_DELAY = 500; // Delay to check bullet velocity (milliseconds)
+export const RETURNING_BULLET_MIN_VELOCITY = 10; // Minimum velocity to consider bullet moving
+export const RETURNING_BULLET_FORCED_SPEED_FACTOR = 1.2; // Speed factor for forced movement
+export const RETURNING_BULLET_UPDATE_INTERVAL = 500; // Interval to update returning bullets (milliseconds)
+export const RETURNING_BULLET_EXPLOSION_RADIUS = 40; // Explosion radius for returning bullets
+export const RETURNING_BULLET_EXPLOSION_PARTICLES = 20; // Number of particles in explosion
+export const RETURNING_BULLET_EXPLOSION_DURATION = 500; // Duration of explosion (milliseconds)
+
+// Add Coffee Effect Constants
+export const MAX_COFFEE_CUPS = 5; // Maximum number of coffee cups player can have
+export const COFFEE_NOTIFICATION_Y = 100; // Y position for coffee notification
+export const COFFEE_NOTIFICATION_DURATION = 2000; // Duration of notification (milliseconds)
+export const COFFEE_NOTIFICATION_END_Y = 50; // End Y position for notification animation
+
+// Clean Code Effect Constants
+export const CLEAN_CODE_MAX_BLOCKS = 3; // Maximum number of small blocks to remove
+export const CODE_NOTIFICATION_Y = 100; // Y position for code cleaning notification
+export const CODE_NOTIFICATION_DURATION = 2000; // Duration of notification (milliseconds)
+export const CODE_NOTIFICATION_END_Y = 50; // End Y position for notification animation
+
+// Fix Bugs Effect Constants
+export const BUG_FIX_NOTIFICATION_Y = 100; // Y position for bug fix notification
+export const BUG_FIX_NOTIFICATION_DURATION = 2000; // Duration of notification (milliseconds)
+export const BUG_FIX_NOTIFICATION_END_Y = 50; // End Y position for notification animation 
