@@ -13,6 +13,9 @@ import {
 } from '../constants.js';
 import { getCharacter, getAllCharacterTypes } from '../characters.js';
 
+// Yellow color for explosion particles
+const EXPLOSION_PARTICLES_COLOR = 0xFFFF00;
+
 class IncomingCall {
   constructor(scene, x, y, characterType = null) {
     this.scene = scene;
@@ -135,8 +138,11 @@ class IncomingCall {
   
   // Method for good calls to disappear with a shrinking effect
   disappearShrinking() {
+    // Create yellow particle texture if it doesn't exist
+    this.createYellowParticleTexture();
+    
     // Create a minimal particle effect
-    const particles = this.scene.add.particles(this.callColor);
+    const particles = this.scene.add.particles('yellow_particle');
     
     const emitter = particles.createEmitter({
       speed: { min: 10, max: 30 },
@@ -185,8 +191,11 @@ class IncomingCall {
   
   // Method for good calls being absorbed by the player
   absorb() {
+    // Create yellow particle texture if it doesn't exist
+    this.createYellowParticleTexture();
+    
     // Create particles for absorption effect
-    const particles = this.scene.add.particles(this.callColor);
+    const particles = this.scene.add.particles('yellow_particle');
     
     const emitter = particles.createEmitter({
       speed: { min: 20, max: 50 },
@@ -246,8 +255,11 @@ class IncomingCall {
   
   // Method for when good calls are shot down by player bullets
   shotDown() {
+    // Create yellow particle texture if it doesn't exist
+    this.createYellowParticleTexture();
+    
     // Create a simple particle effect for destruction
-    const particles = this.scene.add.particles(this.callColor);
+    const particles = this.scene.add.particles('yellow_particle');
     
     const emitter = particles.createEmitter({
       speed: { min: 30, max: 80 },
@@ -283,8 +295,11 @@ class IncomingCall {
   }
   
   explode() {
-    // Create particle explosion - use the character's color
-    const particles = this.scene.add.particles(this.callColor);
+    // Create yellow particle texture if it doesn't exist
+    this.createYellowParticleTexture();
+    
+    // Create particle explosion with yellow particles
+    const particles = this.scene.add.particles('yellow_particle');
     
     const emitter = particles.createEmitter({
       speed: { min: 50, max: 100 },
@@ -385,6 +400,22 @@ class IncomingCall {
     });
     
     return group;
+  }
+  
+  // Helper method to create yellow particle texture
+  createYellowParticleTexture() {
+    // Only create the texture if it doesn't already exist
+    if (!this.scene.textures.exists('yellow_particle')) {
+      const graphics = this.scene.add.graphics();
+      
+      // Draw a small yellow circle for the particle
+      graphics.fillStyle(EXPLOSION_PARTICLES_COLOR, 1); // Yellow color
+      graphics.fillCircle(4, 4, 4); // Small circle for particles
+      
+      // Generate a texture from this graphics object
+      graphics.generateTexture('yellow_particle', 8, 8);
+      graphics.destroy();
+    }
   }
 }
 
