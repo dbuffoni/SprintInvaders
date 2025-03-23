@@ -1,5 +1,5 @@
 // Import constants and functions
-import { CANVAS_WIDTH, PLAYABLE_HEIGHT, INCOMING_CALL_DIALOG_HEIGHT, GAME_STATES, BLOCK_WIDTH, BLOCK_HEIGHT, START_Y, HEADER_HEIGHT, BLOCK_COLORS } from '../constants.js';
+import { CANVAS_WIDTH, PLAYABLE_HEIGHT, INCOMING_CALL_DIALOG_HEIGHT, GAME_STATES, BLOCK_WIDTH, BLOCK_HEIGHT, START_Y, HEADER_HEIGHT, BLOCK_COLORS, BULLET_SPEED, SCENES } from '../constants.js';
 import { getCharacter } from '../characters.js';
 import ScopeBlock from './ScopeBlock.js';
 
@@ -158,7 +158,7 @@ class IncomingCallDialog {
             this.titleBox.fillColor = completionColor;
             
             // Set a timer to reset the header after a delay
-            this.scene.time.delayedCall(2500, () => {
+            this.scene.time.delayedCall(1500, () => {
               // Restore original header text and color
               this.titleText.setText(originalHeaderText);
               this.titleBox.fillColor = originalHeaderColor;
@@ -1032,86 +1032,324 @@ class IncomingCallDialog {
         break;
       
       case 'limitBullets':
-        // Limit bullets and implement reload mechanism
+        // Completely refactored limitBullets effect with new features
         if (this.scene) {
-          console.log('Limiting bullets with reload mechanism');
+          console.log('Activating refactored limitBullets effect');
           
-          // Set bullet limit flags
+          // Define constants for the new effect
+          const EFFECT_DURATION = 15; // 15 seconds as requested
+          const BULLET_SLOWDOWN_FACTOR = 0.2; // Bullets are 60% of normal speed
+          const RETURNING_BULLET_CHANCE = 0.3; // 30% chance to return
+          const RETURN_DELAY_MIN = 0.5; // Min seconds before a bullet returns
+          const RETURN_DELAY_MAX = 2; // Max seconds before a bullet returns
+          
+          // Set flag to prevent incoming calls during this effect
           this.bulletLimitActive = true;
-          this.scene.bulletLimit = this.bulletLimitAmount;
-          this.scene.bulletCount = this.bulletLimitAmount; // Start with full ammo
-          this.scene.reloading = false;
-          this.bulletLimitReloadTime = 3; // 3 seconds to reload
           
           // Use centralized status message for main notification
           this.showStatusMessage({
-            mainMessage: `YOU HAVE ${this.bulletLimitAmount} COMMITS BEFORE BUFFERING!`,
-            duration: 2, // Short duration, will auto-fade
-            headerColor: COLORS.WARNING // Orange/amber color for ammo limit warning
+            mainMessage: `CONNECTION SLOWING DOWN!`,
+            timerMessage: `{duration}s`,
+            duration: EFFECT_DURATION,
+            completionMessage: 'CONNECTION RESTORED!',
+            headerColor: COLORS.WARNING, // Orange/amber color for warning
+            completionColor: COLORS.SUCCESS, // Green for completion
           });
           
-          // Setup reload functionality with space key
+          // Store original functions we'll need to restore later
           const originalShootFunction = this.scene.shoot;
+          const originalCreateBulletFunction = this.scene.createBullet;
+          const originalBulletSpeed = BULLET_SPEED;
           
-          // Override the shoot function
-          this.scene.shoot = () => {
-            if (this.scene.reloading) {
-              console.log('Cannot shoot while reloading');
-              return;
-            }
+          // Override the createBullet function to make slower bullets
+          this.scene.createBullet = (x, y) => {
+            // Create a bullet using the original function
+            const bullet = originalCreateBulletFunction.call(this.scene, x, y);
             
-            if (this.scene.bulletCount > 0) {
-              // Shoot a bullet using the original function
-              originalShootFunction.call(this.scene);
+            // Slow down the bullet
+            if (bullet && bullet.sprite && bullet.sprite.body) {
+              // Get current velocity and slow it down
+              const currentVelY = bullet.sprite.body.velocity.y;
+              bullet.sprite.setVelocityY(currentVelY * BULLET_SLOWDOWN_FACTOR);
               
-              // Decrement bullet count
-              this.scene.bulletCount--;
-              
-              // Check if we're out of ammo
-              if (this.scene.bulletCount === 0) {
-                // Start automatic reload
-                this.startReload();
+              // Chance to turn this bullet into a returning bullet
+              if (Math.random() < RETURNING_BULLET_CHANCE) {
+                // Calculate random delay before return
+                const returnDelay = Phaser.Math.Between(
+                  RETURN_DELAY_MIN * 1000, 
+                  RETURN_DELAY_MAX * 1000
+                );
+                
+                // Add a timer to make this bullet return after delay
+                this.scene.time.delayedCall(returnDelay, () => {
+                  // Make sure bullet still exists
+                  if (bullet && bullet.sprite && bullet.sprite.active) {
+                    console.log('Activating returning bullet!');
+                    // Change bullet color to red to indicate danger
+                    bullet.sprite.setTint(COLORS.DANGER);
+                    
+                    // Instead of directing toward player, use a randomized downward trajectory
+                    // More limited angle range: only +/- 30 degrees from straight down
+                    const randomAngle = Math.PI / 2 + Phaser.Math.FloatBetween(-Math.PI/6, Math.PI/6);
+                    console.log(`Bullet returning with angle: ${randomAngle} (${randomAngle * 180 / Math.PI} degrees)`);
+                    
+                    // Set velocity based on angle (with some randomness in speed)
+                    // Slower speed for easier dodging (60-80% of normal speed)
+                    const returnSpeed = originalBulletSpeed * Phaser.Math.FloatBetween(0.6, 0.8);
+                    // Log velocity values for debugging
+                    console.log(`Setting return velocity: angle=${randomAngle}, speed=${returnSpeed}`);
+                    bullet.sprite.setVelocity(
+                      Math.cos(randomAngle) * returnSpeed,
+                      Math.sin(randomAngle) * returnSpeed
+                    );
+                    
+                    // Ensure bullet physics body is enabled
+                    if (bullet.sprite.body) {
+                      bullet.sprite.body.enable = true;
+                    }
+                    
+                    // Make the returning bullet collide with the player
+                    if (!bullet.isReturning) {
+                      bullet.isReturning = true;
+                      
+                      // Add this bullet to a special group for collision with player
+                      // (if the group doesn't exist, create it)
+                      if (!this.scene.returningBullets) {
+                        this.scene.returningBullets = this.scene.physics.add.group();
+                        
+                        // Set up collision with player
+                        this.scene.physics.add.collider(
+                          this.scene.player.sprite,
+                          this.scene.returningBullets,
+                          (playerSprite, bulletSprite) => {
+                            // Player hit by returning bullet
+                            console.log('Player hit by returning bullet!');
+                            
+                            // Create explosion effect like SimpleBug
+                            const particles = this.scene.add.particles(COLORS.DANGER);
+                            
+                            const emitter = particles.createEmitter({
+                              speed: { min: 30, max: 80 },
+                              angle: { min: 0, max: 360 },
+                              scale: { start: 0.4, end: 0 },
+                              lifespan: 500, // 500ms explosion duration
+                              blendMode: 'ADD',
+                              frequency: 0,
+                              quantity: 20 // Number of particles
+                            });
+                            
+                            // Emit particles at the bullet's position
+                            emitter.explode(20, bulletSprite.x, bulletSprite.y);
+                            
+                            // Create visual indication of explosion
+                            const explosionCircle = this.scene.add.circle(
+                              bulletSprite.x, 
+                              bulletSprite.y,
+                              40, // Explosion radius
+                              COLORS.DANGER,
+                              0.3
+                            );
+                            
+                            // Animate the circle to expand and fade
+                            this.scene.tweens.add({
+                              targets: explosionCircle,
+                              alpha: 0,
+                              scale: 1.5,
+                              duration: 500,
+                              onComplete: () => {
+                                explosionCircle.destroy();
+                                
+                                // Destroy particles after their lifespan
+                                this.scene.time.delayedCall(500, () => {
+                                  particles.destroy();
+                                });
+                              }
+                            });
+                            
+                            // Deduct one coffee cup from the player
+                            if (this.scene.player.takeDamage) {
+                              // Use the player's takeDamage method
+                              this.scene.player.takeDamage();
+                            } else if (this.scene.coffeeCups > 0) {
+                              // Fallback to manual implementation
+                              this.scene.coffeeCups--;
+                              this.scene.updateCoffeeCupsDisplay();
+                              
+                              // Check for game over
+                              if (this.scene.coffeeCups <= 0) {
+                                this.scene.gameState = GAME_STATES.OVER;
+                                this.scene.scene.launch(SCENES.GAME_OVER, { score: this.scene.score });
+                                this.scene.scene.pause();
+                              }
+                            }
+                            
+                            // Destroy the bullet
+                            bulletSprite.destroy();
+                          }
+                        );
+                      }
+                      
+                      // Add to the returning bullets group
+                      this.scene.returningBullets.add(bullet.sprite);
+                      
+                      // Add to our tracking array for continuous updates
+                      if (!this.scene.returningBulletTrackers) {
+                        this.scene.returningBulletTrackers = [];
+                      }
+                      this.scene.returningBulletTrackers.push({
+                        sprite: bullet.sprite,
+                        createdAt: this.scene.time.now
+                      });
+                      console.log(`Added bullet to returning trackers. Total: ${this.scene.returningBulletTrackers.length}`);
+                      
+                      // Remove from regular bullets group to prevent hitting enemies
+                      if (bullet.sprite && this.scene.bullets && this.scene.bullets.contains(bullet.sprite)) {
+                        this.scene.bullets.remove(bullet.sprite);
+                      }
+                      
+                      // Add a delayed check to verify the bullet is actually moving
+                      this.scene.time.delayedCall(500, () => {
+                        if (bullet && bullet.sprite && bullet.sprite.active && bullet.sprite.body) {
+                          const vx = bullet.sprite.body.velocity.x;
+                          const vy = bullet.sprite.body.velocity.y;
+                          console.log(`Bullet velocity check after 500ms: vx=${vx}, vy=${vy}`);
+                          
+                          // If bullet velocity is too low, force it to move again
+                          if (Math.abs(vx) < 10 && Math.abs(vy) < 10) {
+                            console.log("Bullet not moving! Forcing velocity again with direct approach.");
+                            
+                            // Force a new downward trajectory with constrained angle
+                            const forcedAngle = Math.PI / 2 + Phaser.Math.FloatBetween(-Math.PI/6, Math.PI/6);
+                            const forcedSpeed = returnSpeed * 1.2; // Slightly faster but still manageable
+                            
+                            bullet.sprite.body.setVelocity(
+                              Math.cos(forcedAngle) * forcedSpeed,
+                              Math.sin(forcedAngle) * forcedSpeed
+                            );
+                            console.log(`Forced new velocity with angle ${forcedAngle * 180 / Math.PI} degrees`);
+                          }
+                        }
+                      });
+                    }
+                  }
+                });
               }
             }
+            
+            return bullet;
           };
           
-          // Function to start the reload process
-          this.startReload = () => {
-            if (this.bulletLimitActive && !this.scene.reloading) {
-              // Start reload process
-              this.scene.reloading = true;
-              
-              // Show reloading message with timer
-              this.showStatusMessage({
-                mainMessage: `BUFFERING...`,
-                timerMessage: `{duration}s`,
-                duration: this.bulletLimitReloadTime,
-                completionMessage: 'BUFFERING COMPLETE!',
-                headerColor: COLORS.WARNING, // Orange/amber color for reload
-                completionColor: COLORS.SUCCESS, // Green for completion
-                onComplete: () => {
-                  // Reload complete
-                  this.scene.bulletCount = this.bulletLimitAmount;
-                  this.scene.reloading = false;
+          // Block incoming calls during this effect by temporarily overriding
+          // the createIncomingCall function to do nothing
+          this.originalCreateIncomingCall = this.scene.createIncomingCall;
+          this.scene.createIncomingCall = (x, y, characterType) => {
+            console.log('Blocking incoming call during limitBullets effect');
+            return null;
+          };
+          
+          // Create a tracking object for returning bullets
+          this.scene.returningBulletTrackers = [];
+          
+          // Setup a periodic update function to keep the bullets moving toward the player
+          const updateReturningBullets = () => {
+            if (this.scene && this.scene.returningBulletTrackers) {
+              // Process each returning bullet
+              for (let i = this.scene.returningBulletTrackers.length - 1; i >= 0; i--) {
+                const tracker = this.scene.returningBulletTrackers[i];
+                
+                if (tracker && tracker.sprite && tracker.sprite.active && tracker.sprite.body) {
+                  // Check if bullet has reached the bottom of the screen
+                  if (tracker.sprite.y > this.scene.cameras.main.height) {
+                    // Destroy the bullet when it goes off-screen at the bottom
+                    tracker.sprite.destroy();
+                    // Remove from tracker array
+                    this.scene.returningBulletTrackers.splice(i, 1);
+                    console.log("Bullet reached bottom border and was destroyed");
+                  }
+                  // Randomly change direction occasionally (10% chance per update)
+                  else if (Math.random() < 0.05) {
+                    // Apply a small random angle adjustment
+                    // Smaller angle adjustment (+/- 15 degrees instead of +/- 17 degrees)
+                    const randomAngle = Phaser.Math.FloatBetween(-0.25, 0.25);
+                    // Slower speed for random direction changes
+                    const speed = originalBulletSpeed * 0.6;
+                    const currentVelX = tracker.sprite.body.velocity.x;
+                    const currentVelY = tracker.sprite.body.velocity.y;
+                    
+                    // Calculate current angle
+                    const currentAngle = Math.atan2(currentVelY, currentVelX);
+                    
+                    // Apply random adjustment to angle while keeping it within +/- 30 degrees of down
+                    let newAngle = currentAngle + randomAngle;
+                    
+                    // Enforce angle limits: must stay between 60 and 120 degrees (down ±30°)
+                    const minAllowedAngle = Math.PI / 3; // 60 degrees
+                    const maxAllowedAngle = 2 * Math.PI / 3; // 120 degrees
+                    
+                    // If outside allowed range, clamp it
+                    if (newAngle < minAllowedAngle) {
+                      newAngle = minAllowedAngle;
+                    } else if (newAngle > maxAllowedAngle) {
+                      newAngle = maxAllowedAngle;
+                    }
+                    
+                    // Set new velocity based on adjusted angle
+                    tracker.sprite.body.setVelocity(
+                      Math.cos(newAngle) * speed,
+                      Math.sin(newAngle) * speed
+                    );
+                    console.log(`Bullet path randomized. New angle: ${newAngle}`);
+                  }
+                } else {
+                  // Remove invalid trackers
+                  this.scene.returningBulletTrackers.splice(i, 1);
                 }
-              });
+              }
+            }
+            
+            // Continue updating if effect is still active
+            if (this.bulletLimitActive) {
+              this.scene.time.delayedCall(500, updateReturningBullets);
             }
           };
           
-          // Use a delayed call instead of visible timer to track effect duration
-          this.scene.time.delayedCall(this.bulletLimitDuration * 1000, () => {
-            // Remove bullet limit
+          // Start the update loop
+          updateReturningBullets();
+          
+          // Use a delayed call to restore original functions when effect ends
+          this.scene.time.delayedCall(EFFECT_DURATION * 1000, () => {
+            // Remove bullet limit flag
             this.bulletLimitActive = false;
             
-            // Restore original shoot function
+            // Restore original functions
             this.scene.shoot = originalShootFunction;
+            this.scene.createBullet = originalCreateBulletFunction;
             
-            // Show effect ended notification
-            this.showStatusMessage({
-              mainMessage: 'ADSL RESTORED!',
-              headerColor: COLORS.SUCCESS, // Green color for positive effect
-              duration: 2 // Will auto-fade
-            });
+            // Restore original createIncomingCall function
+            if (this.originalCreateIncomingCall) {
+              this.scene.createIncomingCall = this.originalCreateIncomingCall;
+              this.originalCreateIncomingCall = null;
+            }
+            
+            // Clean up returning bullets group if it exists
+            if (this.scene.returningBullets) {
+              // Clear existing physics colliders with the group
+              this.scene.physics.world.colliders.getActive()
+                .filter(collider => 
+                  collider.object1 === this.scene.returningBullets || 
+                  collider.object2 === this.scene.returningBullets
+                )
+                .forEach(collider => collider.destroy());
+                
+              // Destroy any remaining bullets in the group
+              this.scene.returningBullets.clear(true, true);
+            }
+            
+            // Clear tracking array
+            if (this.scene.returningBulletTrackers) {
+              console.log(`Clearing ${this.scene.returningBulletTrackers.length} tracked returning bullets`);
+              this.scene.returningBulletTrackers = [];
+            }
           });
         }
         break;
