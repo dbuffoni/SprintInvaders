@@ -63,6 +63,7 @@ class GameScene extends Phaser.Scene {
     this.xxlBlockCreated = false; // Flag to track if an XXL block has been created in the current sprint
     this.ufosToSpawn = UFO_APPEARANCES_PER_SPRINT; // Track remaining UFOs to spawn
     this.manuallyPaused = false;
+    this.soundtrack = null; // Store reference to the soundtrack
     
     // Check if we have an override message index from the StartScene
     if (data && data.overrideMessageIndex !== undefined) {
@@ -76,6 +77,13 @@ class GameScene extends Phaser.Scene {
     // Set background color
     this.cameras.main.setBackgroundColor(BACKGROUND_COLOR);
 
+    // Play the soundtrack
+    this.soundtrack = this.sound.add('soundtrack', {
+      volume: 0.7,
+      loop: true
+    });
+    this.soundtrack.play();
+
     // Create input keys
     this.keys = {
       left: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.LEFT),
@@ -85,7 +93,8 @@ class GameScene extends Phaser.Scene {
       down: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.DOWN),
       enter: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ENTER),
       r: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.R),
-      p: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.P)
+      p: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.P),
+      s: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.S)
     };
 
     // Create bullet group - must be before player creation
@@ -259,20 +268,16 @@ class GameScene extends Phaser.Scene {
     // Create new coffee cups display
     this.coffeeCupsDisplay = [];
     for (let i = 0; i < this.coffeeCups; i++) {
-      // Create coffee cup icon
-      if (!this.textures.exists('coffee_cup')) {
-        const graphics = this.add.graphics();
-        graphics.fillStyle(0x8B4513, 1); // Brown
-        graphics.fillRect(0, 0, 20, 25);
-        graphics.generateTexture('coffee_cup', 20, 25);
-        graphics.destroy();
-      }
-      
+      // Use the preloaded coffee cup image
       const cup = this.add.image(
-        CANVAS_WIDTH - 30 - (i * 25), 
+        CANVAS_WIDTH - 30 - (i * 35), 
         20, 
         'coffee_cup'
       );
+      
+      // Preserve original proportions
+      cup.setScale(0.7); // Adjust scale as needed for appropriate size
+      
       this.coffeeCupsDisplay.push(cup);
     }
   }
@@ -439,6 +444,11 @@ class GameScene extends Phaser.Scene {
           this.scrumBoard.forceDeactivate();
         }
       }
+    });
+    
+    // S key to toggle audio
+    this.input.keyboard.on('keydown-S', () => {
+      this.toggleAudio();
     });
     
     // R key to restart game
@@ -652,6 +662,12 @@ class GameScene extends Phaser.Scene {
   handlePlayerBlockCollision(player, block) {
     // Game over when player collides with a block
     this.gameState = GAME_STATES.OVER;
+    
+    // Stop the soundtrack
+    if (this.soundtrack) {
+      this.soundtrack.stop();
+    }
+    
     this.scene.launch(SCENES.GAME_OVER, { score: this.score });
     this.scene.pause();
   }
@@ -672,6 +688,12 @@ class GameScene extends Phaser.Scene {
     // Check for game over
     if (this.coffeeCups <= 0) {
       this.gameState = GAME_STATES.OVER;
+      
+      // Stop the soundtrack
+      if (this.soundtrack) {
+        this.soundtrack.stop();
+      }
+      
       this.scene.launch(SCENES.GAME_OVER, { score: this.score });
       this.scene.pause();
     }
@@ -765,6 +787,11 @@ class GameScene extends Phaser.Scene {
     // Cleanup any active effects
     this.resetEffects();
     
+    // Stop soundtrack before restarting
+    if (this.soundtrack) {
+      this.soundtrack.stop();
+    }
+    
     // Reset game state and restart scene
     this.scene.restart();
   }
@@ -837,81 +864,87 @@ class GameScene extends Phaser.Scene {
     return block;
   }
   
-  // New method to dispose blocks - works for all categories
+  // Method to dispose blocks - following the new simplified placement logic
   disposeBlock(block) {
     console.log(`Disposing block of category ${block.category}`);
     
-    // Get all active blocks to analyze existing rows
+    // Get all active blocks
     const activeBlocks = this.scopeBlockInstances.filter(b => 
       b.sprite && b.sprite.active && b !== block
     );
     
-    // Find all unique rows (y positions) of existing blocks
-    const existingRows = [...new Set(activeBlocks.map(b => b.sprite.y))].sort((a, b) => a - b);
-    
-    // Set a minimum gap between blocks for proper spacing
-    const minBlockGap = 20; // minimum space between blocks
-    
-    // Try to find space in existing rows
-    let placementFound = false;
-    let targetY, targetX;
-    
-    // Check each existing row for available space
-    for (const rowY of existingRows) {
-      // Get all blocks in this row
-      const blocksInRow = activeBlocks.filter(b => b.sprite.y === rowY);
-      
-      // Sort blocks by x position to find gaps
-      blocksInRow.sort((a, b) => a.sprite.x - b.sprite.x);
-      
-      // Check for space at the beginning of the row
-      if (blocksInRow.length > 0 && blocksInRow[0].sprite.x >= BLOCK_WIDTH + minBlockGap) {
-        targetX = minBlockGap;
-        targetY = rowY;
-        placementFound = true;
-        break;
-      }
-      
-      // Check for space at the end of the row
-      if (blocksInRow.length > 0) {
-        const lastBlock = blocksInRow[blocksInRow.length - 1];
-        const rightEdge = lastBlock.sprite.x + lastBlock.width;
-        if (CANVAS_WIDTH - rightEdge >= BLOCK_WIDTH + minBlockGap) {
-          targetX = rightEdge + minBlockGap;
-          targetY = rowY;
-          placementFound = true;
-          break;
-        }
-      }
-      
-      // Check for gaps between blocks
-      for (let i = 0; i < blocksInRow.length - 1; i++) {
-        const rightEdge = blocksInRow[i].sprite.x + blocksInRow[i].width;
-        const gap = blocksInRow[i + 1].sprite.x - rightEdge;
-        
-        if (gap >= BLOCK_WIDTH + (minBlockGap * 2)) {
-          targetX = rightEdge + minBlockGap;
-          targetY = rowY;
-          placementFound = true;
-          break;
-        }
-      }
-      
-      if (placementFound) break;
+    // If there are no active blocks, place in the center of the first row
+    if (activeBlocks.length === 0) {
+      block.x = CANVAS_WIDTH / 2 - block.width / 2;
+      block.y = START_Y;
+      return block;
     }
     
-    // If no space found in existing rows, create a new row below the lowest block
-    if (!placementFound) {
-      // Find the lowest block
-      let lowestY = existingRows.length > 0 ? Math.max(...existingRows) : START_Y;
-      
-      // Position the block below the lowest row with proper spacing
-      targetY = lowestY + V_SPACING;
-      
-      // Center the block horizontally with some randomness
-      const middleX = CANVAS_WIDTH / 2 - BLOCK_WIDTH / 2;
-      const randomOffsetX = Math.floor(Math.random() * 80) - 40; // Random offset between -40 and +40 pixels
-      targetX = Math.max(minBlockGap, Math.min(CANVAS_WIDTH - BLOCK_WIDTH - minBlockGap, middleX + randomOffsetX));
+    // Find the bottom row (highest y value)
+    const bottomRowY = Math.max(...activeBlocks.map(b => b.sprite.y));
+    
+    // Get all blocks in the bottom row
+    const bottomRowBlocks = activeBlocks.filter(b => b.sprite.y === bottomRowY);
+    
+    // Sort blocks by x position
+    bottomRowBlocks.sort((a, b) => a.sprite.x - b.sprite.x);
+    
+    // If no blocks in bottom row (shouldn't happen if we have active blocks), use default placement
+    if (bottomRowBlocks.length === 0) {
+      block.x = CANVAS_WIDTH / 2 - block.width / 2;
+      block.y = START_Y;
+      return block;
+    }
+    
+    // Find a block approximately in the middle of the bottom row
+    const middleIndex = Math.floor(bottomRowBlocks.length / 2);
+    const middleBlock = bottomRowBlocks[middleIndex];
+    
+    // Define minimum gap between blocks
+    const minBlockGap = 20;
+    
+    // Check if there's room on the left side of the middle block
+    const leftEdge = middleBlock.sprite.x;
+    let hasLeftSpace = false;
+    
+    if (middleIndex > 0) {
+      // There's a block to the left, check gap
+      const leftBlock = bottomRowBlocks[middleIndex - 1];
+      const leftBlockRightEdge = leftBlock.sprite.x + leftBlock.width;
+      hasLeftSpace = (leftEdge - leftBlockRightEdge) >= (block.width + minBlockGap * 2);
+    } else {
+      // No block to the left, check if there's space to the canvas edge
+      hasLeftSpace = leftEdge >= (block.width + minBlockGap);
+    }
+    
+    // Check if there's room on the right side of the middle block
+    const rightEdge = middleBlock.sprite.x + middleBlock.width;
+    let hasRightSpace = false;
+    
+    if (middleIndex < bottomRowBlocks.length - 1) {
+      // There's a block to the right, check gap
+      const rightBlock = bottomRowBlocks[middleIndex + 1];
+      hasRightSpace = (rightBlock.sprite.x - rightEdge) >= (block.width + minBlockGap * 2);
+    } else {
+      // No block to the right, check if there's space to the canvas edge
+      hasRightSpace = (CANVAS_WIDTH - rightEdge) >= (block.width + minBlockGap);
+    }
+    
+    let targetX, targetY;
+    
+    // Place block based on available space
+    if (hasLeftSpace) {
+      // Place directly to the left of the middle block with minimum gap
+      targetX = leftEdge - block.width - minBlockGap;
+      targetY = bottomRowY;
+    } else if (hasRightSpace) {
+      // Place directly to the right of the middle block with minimum gap
+      targetX = rightEdge + minBlockGap;
+      targetY = bottomRowY;
+    } else {
+      // No space on either side, place below the middle block
+      targetX = middleBlock.sprite.x + (middleBlock.width - block.width) / 2; // Center below the middle block
+      targetY = bottomRowY + V_SPACING;
     }
     
     // Update block position
@@ -998,6 +1031,11 @@ class GameScene extends Phaser.Scene {
     this.physics.resume();
     this.time.paused = false;
     
+    // Resume soundtrack if it was paused
+    if (this.soundtrack && this.soundtrack.isPaused) {
+      this.soundtrack.resume();
+    }
+    
     // If scrumBoard exists, reset its effects
     if (this.scrumBoard) {
       if (this.scrumBoard.weaponLockActive) {
@@ -1039,6 +1077,11 @@ class GameScene extends Phaser.Scene {
       this.physics.pause();
       this.time.paused = true;
       
+      // Pause soundtrack
+      if (this.soundtrack && this.soundtrack.isPlaying) {
+        this.soundtrack.pause();
+      }
+      
       // Create pause text
       this.pauseText = this.add.text(
         CANVAS_WIDTH / 2,
@@ -1062,6 +1105,11 @@ class GameScene extends Phaser.Scene {
       this.physics.resume();
       this.time.paused = false;
       
+      // Resume soundtrack
+      if (this.soundtrack && this.soundtrack.isPaused) {
+        this.soundtrack.resume();
+      }
+      
       // Remove pause text if it exists
       if (this.pauseText) {
         this.pauseText.destroy();
@@ -1069,6 +1117,19 @@ class GameScene extends Phaser.Scene {
       }
       
       console.log('Game resumed');
+    }
+  }
+  
+  // New method to toggle audio
+  toggleAudio() {
+    if (this.soundtrack) {
+      if (this.soundtrack.isPlaying) {
+        this.soundtrack.pause();
+        console.log('Audio muted');
+      } else {
+        this.soundtrack.resume();
+        console.log('Audio unmuted');
+      }
     }
   }
 }

@@ -19,6 +19,12 @@ class BootScene extends Phaser.Scene {
     );
     loadingText.setOrigin(0.5, 0.5);
     
+    // Load the soundtrack
+    this.load.audio('soundtrack', 'assets/Code or Explode.mp3');
+    
+    // Load game assets
+    this.load.image('coffee_cup', 'assets/coffee.png');
+    
     // Here we would load assets, but we're using simple shapes for now
     // If you add images later, you can load them here like:
     // this.load.image('player', 'assets/player.png');
