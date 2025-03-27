@@ -22,6 +22,9 @@ class BootScene extends Phaser.Scene {
     // Load the soundtrack
     this.load.audio('soundtrack', 'assets/Code or Explode.mp3');
     
+    // Load sound effects
+    this.load.audio('fire_sound', 'assets/fire.mp3');
+    
     // Load game assets
     this.load.image('coffee_cup', 'assets/coffee.png');
     

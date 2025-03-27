@@ -64,6 +64,7 @@ class GameScene extends Phaser.Scene {
     this.ufosToSpawn = UFO_APPEARANCES_PER_SPRINT; // Track remaining UFOs to spawn
     this.manuallyPaused = false;
     this.soundtrack = null; // Store reference to the soundtrack
+    this.fireSound = null; // Store reference to the fire sound
     
     // Check if we have an override message index from the StartScene
     if (data && data.overrideMessageIndex !== undefined) {
@@ -83,6 +84,11 @@ class GameScene extends Phaser.Scene {
       loop: true
     });
     this.soundtrack.play();
+    
+    // Load fire sound effect
+    this.fireSound = this.sound.add('fire_sound', {
+      volume: 0.4
+    });
 
     // Create input keys
     this.keys = {
@@ -700,6 +706,9 @@ class GameScene extends Phaser.Scene {
   }
   
   shoot() {
+    // Play fire sound
+    this.fireSound.play();
+    
     // Create bullet at player position
     this.createBullet(this.player.x + this.player.width / 2, this.player.y);
   }
