@@ -65,6 +65,10 @@ class GameScene extends Phaser.Scene {
     this.manuallyPaused = false;
     this.soundtrack = null; // Store reference to the soundtrack
     this.fireSound = null; // Store reference to the fire sound
+    this.explosionSound = null; // Store reference to the explosion sound
+    this.wallHitSound = null; // Store reference to the wall hit sound
+    this.playerHitSound = null; // Store reference to the player hit sound
+    this.ufoSound = null; // Store reference to the UFO sound
     
     // Check if we have an override message index from the StartScene
     if (data && data.overrideMessageIndex !== undefined) {
@@ -87,6 +91,26 @@ class GameScene extends Phaser.Scene {
     
     // Load fire sound effect
     this.fireSound = this.sound.add('fire_sound', {
+      volume: 0.4
+    });
+    
+    // Load explosion sound effect
+    this.explosionSound = this.sound.add('explosion_sound', {
+      volume: 0.5
+    });
+    
+    // Load wall hit sound effect
+    this.wallHitSound = this.sound.add('wall_hit_sound', {
+      volume: 0.4
+    });
+    
+    // Load player hit sound effect
+    this.playerHitSound = this.sound.add('player_hit_sound', {
+      volume: 0.5
+    });
+    
+    // Load UFO sound effect
+    this.ufoSound = this.sound.add('ufo_sound', {
       volume: 0.4
     });
 
@@ -588,6 +612,9 @@ class GameScene extends Phaser.Scene {
     const startFromLeft = Math.random() > 0.5;
     const ufo = new UFO(this, startFromLeft);
     
+    // Play UFO sound
+    this.ufoSound.play();
+    
     // Add to tracking arrays
     this.ufos.push(ufo);
     this.ufoGroup.add(ufo.sprite);
@@ -647,6 +674,9 @@ class GameScene extends Phaser.Scene {
     if (blockInstance) {
       // Hit the block and check if it should be destroyed
       if (blockInstance.hit()) {
+        // Play explosion sound when the block is destroyed
+        this.explosionSound.play();
+        
         // Remove from the array
         this.scopeBlockInstances = this.scopeBlockInstances.filter(
           instance => instance !== blockInstance
@@ -658,6 +688,9 @@ class GameScene extends Phaser.Scene {
         // Update score
         this.score += 10;
         this.scoreText.setText(`Score: ${this.score}`);
+      } else {
+        // Play wall hit sound when the block is hit but not destroyed
+        this.wallHitSound.play();
       }
     }
     
@@ -666,6 +699,9 @@ class GameScene extends Phaser.Scene {
   }
   
   handlePlayerBlockCollision(player, block) {
+    // Play player hit sound
+    this.playerHitSound.play();
+    
     // Game over when player collides with a block
     this.gameState = GAME_STATES.OVER;
     
@@ -686,6 +722,9 @@ class GameScene extends Phaser.Scene {
     
     // Destroy the block
     block.destroy();
+    
+    // Play player hit sound
+    this.playerHitSound.play();
     
     // Decrease coffee cups (lives)
     this.coffeeCups--;
@@ -831,6 +870,11 @@ class GameScene extends Phaser.Scene {
     // Get the incoming call instance from the sprite
     const call = callSprite.incomingCallInstance;
     if (call) {
+      // Only play hit sound if the call is from an evil character
+      if (call.character.isEvil) {
+        this.playerHitSound.play();
+      }
+      
       // Use the call's handler which checks isEvil and behaves accordingly
       call.handlePlayerCollision();
     }
@@ -1010,6 +1054,9 @@ class GameScene extends Phaser.Scene {
   }
   
   handlePlayerBugCollision(player, bugSprite) {
+    // Play player hit sound
+    this.playerHitSound.play();
+    
     // Get the bug instance from the sprite
     const bug = bugSprite.simpleBugInstance;
     if (bug) {
